@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  useState,
-  useCallback,
-  useEffect,
-  useRef,
-  DragEvent,
-  ChangeEvent,
-} from "react";
+import { useState, useCallback, useEffect, useRef, DragEvent } from "react";
 import { motion, AnimatePresence } from "motion/react";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];

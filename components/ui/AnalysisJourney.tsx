@@ -32,8 +32,6 @@ const STAGES: StageInfo[] = [
   },
 ];
 
-const STAGE_DURATIONS = [2800, 3200, 3200]; // ms per stage
-
 /* ── Paper airplane SVG ───────────────────────────── */
 function PaperPlane({ className = "" }: { className?: string }) {
   return (
@@ -495,16 +493,14 @@ function ResultsPostcard({ postUrl }: { postUrl: string }) {
 /* ── Main AnalysisJourney ─────────────────────────── */
 
 type ApiProgress = {
-  stage: string;
-  message: string;
   progress: number;
 };
 
 export function AnalysisJourney({ postUrl }: { postUrl: string }) {
   const [stage, setStage] = useState<AnalysisStage>(0);
   const [showResults, setShowResults] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [apiProgress, setApiProgress] = useState<ApiProgress | null>(null);
+  const [, setError] = useState<string | null>(null);
+  const [, setApiProgress] = useState<ApiProgress | null>(null);
 
   useEffect(() => {
     const fetchTrace = async () => {
