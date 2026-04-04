@@ -4,6 +4,10 @@
 
 Postcard is a digital forensics tool that takes a screenshot of a social media post and traces it to its origin — calculating how much the content has drifted from the original along the way.
 
+## The problem
+
+Screenshots are the primary currency of misinformation. They strip context, remove timestamps, and are easily manipulated. A viral screenshot often removes the original author's byline, date, and any subsequent corrections. Postcard reverses this entropy by finding the primary source and auditing it for forensic consistency.
+
 **Track:** PantherHacks 2026 — Cybersecurity  
 **Team:** Ethan + Yves  
 **Stack:** Next.js · Gemini (Google AI) · AI SDK v6 · Drizzle ORM + Turso/libSQL
@@ -16,13 +20,13 @@ Postcard is a digital forensics tool that takes a screenshot of a social media p
 2. **Vision parse** — Gemini extracts text, handles, timestamps, and engagement counts.
 3. **Navigator agent** — Gemini synthesizes high-precision search queries to find the primary source.
 4. **Multimodal auditor** — Gemini verifies the source URL, timestamp consistency, and visual fingerprints.
-5. **Postmark score** — The system calculates the final verdict and provides a forensic audit trail.
+5. **postcard score** — The system calculates the final verdict and provides a forensic audit trail.
 
 ---
 
 ## Technical blueprint
 
-For the full technical specification, including Zod schemas, database ERD, and component breakdown, see the [design document](file:///c:/Users/ethan/Documents/GitHub/postcard/DESIGN.md).
+For the full technical specification, including Zod schemas, database ERD, and component breakdown, see the **[design document](DESIGN.md)**.
 
 ---
 
@@ -51,9 +55,13 @@ npm run dev
 
 ---
 
+## Roadmap
+
+Implementation progress is tracked via the **[GitHub roadmap issue #12](https://github.com/EthanThatOneKid/postcard/issues/12)**.
+
 ## Project structure
 
-All technical documentation is consolidated in [DESIGN.md](file:///c:/Users/ethan/Documents/GitHub/postcard/DESIGN.md).
+All technical documentation is consolidated in **[DESIGN.md](DESIGN.md)**.
 
 ```bash
 postcard/
