@@ -1,7 +1,7 @@
 # Postcard design document
 
 > **Team:** [Ethan](https://github.com/EthanThatOneKid), [Yves](https://github.com/hallowsyves)  
-> **Event:** PantherHacks 2026 (April 3–5, 2026)  
+> **Event:** [PantherHacks 2026](https://pantherhacks2026.devpost.com/) (April 3–5, 2026)  
 > **Track:** Cybersecurity
 > **Stack:** Next.js, TypeScript, Tailwind, Google Gemini, Vercel AI SDK v6, Drizzle ORM, Turso/libSQL, Jina Reader
 

@@ -8,7 +8,7 @@ Postcard is a digital forensics tool that takes a screenshot of a social media p
 
 Screenshots are the primary currency of misinformation. They strip context, remove timestamps, and are easily manipulated. A viral screenshot often removes the original author's byline, date, and any subsequent corrections. Postcard reverses this entropy by finding the primary source and auditing it for forensic consistency.
 
-**Track:** PantherHacks 2026 — Cybersecurity  
+**Event:** [PantherHacks 2026](https://pantherhacks2026.devpost.com/) — Cybersecurity  
 **Team:** Ethan + Yves  
 **Stack:** Next.js · Gemini (Google AI) · AI SDK v6 · Drizzle ORM + Turso/libSQL
 
