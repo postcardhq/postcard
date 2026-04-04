@@ -71,8 +71,8 @@ const MAX_SOURCES = 10;
 
 export async function corroboratePostcard(
   postcard: Postcard,
-  mainText: string,
-  onProgress?: (log: string) => void,
+  originalMarkdown: string,
+  onProgress?: (message: string) => void,
 ): Promise<CorroborationResult> {
   const corroborationLog: string[] = [];
   const primarySources: CorroborationSource[] = [];
@@ -91,7 +91,7 @@ export async function corroboratePostcard(
     PlatformDorkPatterns[postcard.platform] ?? PlatformDorkPatterns.Other;
 
   log(
-    `Starting search grounding for ${postcard.platform} post using ${dorkFn(mainText).slice(0, 30)}...`,
+    `Starting search grounding for ${postcard.platform} post using ${dorkFn(originalMarkdown).slice(0, 30)}...`,
   );
 
   const { fullStream } = await streamText({
@@ -120,7 +120,7 @@ Return your final verdict in structured JSON format with relevance classificatio
 
 Platform: ${postcard.platform}
 Username: ${postcard.username ?? "unknown"}
-Content: ${postcard.mainText}
+Content: ${originalMarkdown}
 
 Search for corroborating or refuting sources. Focus on:
 1. News articles from trusted domains

@@ -15,8 +15,14 @@ export type AuditResult = z.infer<typeof AuditResultSchema>;
 
 export async function auditPostcard(
   url: string,
-  postcard: Postcard,
-): Promise<AuditResult> {
+  postcard: import("../vision/ocr").Postcard,
+): Promise<{
+  originScore: number;
+  temporalScore: number;
+  visualScore: number;
+  totalScore: number;
+  auditLog: string[];
+}> {
   const auditLog: string[] = [`Starting audit for URL: ${url}`];
   let originScore = 0;
   let temporalScore = 0;

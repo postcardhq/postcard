@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { preprocessImage } from "./vision/processor";
-import { extractPostmark } from "./vision/ocr";
+import { extractPostcard } from "./vision/ocr";
 import { navigateToSource } from "./agents/navigator";
-import { auditPostmark } from "./agents/verifier";
-import { corroboratePostmark } from "./agents/corroborator";
+import { auditPostcard } from "./agents/verifier";
+import { corroboratePostcard } from "./agents/corroborator";
 
 export const CorroborationSchema = z.object({
   primarySources: z.array(
@@ -38,7 +38,7 @@ export type Corroboration = z.infer<typeof CorroborationSchema>;
 export const PostcardReportSchema = z.object({
   ocr: z.object({
     markdown: z.string(),
-    postmark: z.object({
+    postcard: z.object({
       username: z.string().optional(),
       timestampText: z.string().optional(),
       platform: z.string(),
@@ -81,7 +81,7 @@ const MOCK_REPORT: PostcardReport = {
   ocr: {
     markdown:
       "## @YeOldeTweeter\n**Breaking: local man discovers that water is, in fact, wet.**\n*14h ago · 3.2K Retweets · 21.4K Likes*",
-    postmark: {
+    postcard: {
       username: "@YeOldeTweeter",
       timestampText: "14h ago",
       platform: "X",
@@ -164,7 +164,7 @@ export const TraceReportSchema = z.object({
   markdown: z.string(),
   platform: z.string(),
   corroboration: CorroborationSchema,
-  postmarkScore: z.number().min(0).max(1),
+  postcardScore: z.number().min(0).max(1),
   timestamp: z.string().datetime(),
 });
 
@@ -186,7 +186,7 @@ export async function processTrace(
       markdown: MOCK_REPORT.ocr.markdown,
       platform: "X",
       corroboration: MOCK_REPORT.corroboration,
-      postmarkScore: 0.85,
+      postcardScore: 0.85,
       timestamp: new Date().toISOString(),
     };
   }
@@ -204,24 +204,29 @@ export async function processTrace(
   const platform = inferPlatform(url);
   progress("corroborating", "Searching for primary sources...", 0.4);
 
-  const postmark: import("./vision/ocr").Postmark = {
+  const postcard: import("./vision/ocr").Postcard = {
     platform: platform as "X" | "YouTube" | "Reddit" | "Instagram" | "Other",
     username: undefined,
     timestampText: undefined,
     mainText: markdown.slice(0, 500),
   };
 
-  const corroboration = await corroboratePostmark(postmark, markdown, (msg) => {
-    progress("corroborating", msg, 0.5);
-  });
+  const corroboration = await corroboratePostcard(
+    postcard,
+    markdown,
+    (msg: string) => {
+      progress("corroborating", msg, 0.5);
+    },
+  );
 
-  progress("scoring", "Calculating Postmark score...", 0.9);
+  progress("scoring", "Calculating Postcard score...", 0.9);
 
-  const postmarkScore =
+  const postcardScore =
     0.7 * corroboration.confidenceScore +
     (0.3 *
-      corroboration.primarySources.filter((s) => s.relevance === "supporting")
-        .length) /
+      corroboration.primarySources.filter(
+        (s: { relevance: string }) => s.relevance === "supporting",
+      ).length) /
       Math.max(corroboration.primarySources.length, 1);
 
   progress("complete", "Trace complete", 1);
@@ -231,7 +236,7 @@ export async function processTrace(
     markdown,
     platform,
     corroboration,
-    postmarkScore,
+    postcardScore,
     timestamp: new Date().toISOString(),
   });
 }
@@ -261,22 +266,22 @@ export async function processPostcard(
     sharpen: true,
   });
 
-  // 2. OCR + Postmark extraction via Gemini 1.5 Flash vision
-  const ocr = await extractPostmark(processed, mimeType);
+  // 2. OCR + Postcard extraction via Gemini 1.5 Flash vision
+  const ocr = await extractPostcard(processed, mimeType);
 
   // 3. Throttle — avoid hitting the RPM cap between back-to-back Gemini calls
   await new Promise((resolve) => setTimeout(resolve, 2000));
 
   // 4. Navigator Agent — triangulate the source URL via Google Search grounding
   const { url: targetUrl, queries } = await navigateToSource(
-    ocr.postmark,
+    ocr.postcard,
     ocr.markdown,
   );
 
   // 5. Forensic Audit — Playwright scrapes the live page and computes scores
   //    Skip if no URL was found by the navigator
   const audit = targetUrl
-    ? await auditPostmark(targetUrl, ocr.postmark)
+    ? await auditPostcard(targetUrl, ocr.postcard)
     : {
         originScore: 0,
         temporalScore: 0,
@@ -287,7 +292,7 @@ export async function processPostcard(
 
   // 6. Primary Source Corroboration — AI SDK agent loop with Google Dorking
   //    Uses trusted domain allowlist to find corroborating or refuting sources
-  const corroboration = await corroboratePostmark(ocr.postmark, ocr.markdown);
+  const corroboration = await corroboratePostcard(ocr.postcard, ocr.markdown);
 
   return PostcardReportSchema.parse({
     ocr,

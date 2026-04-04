@@ -2,61 +2,40 @@ import { google } from "@ai-sdk/google";
 import { generateText, Output } from "ai";
 import { z } from "zod";
 
+// Renamed from Postmark to Postcard to simplify branding
 export const PostcardSchema = z.object({
-  username: z.string().optional().describe("Found handles like @username"),
+  username: z.string().optional().describe("User handle (e.g. '@elonmusk')"),
   timestampText: z
     .string()
     .optional()
-    .describe(
-      'Relative or absolute timestamp in the shot (e.g. "2h ago", "Oct 12, 2025")',
-    ),
+    .describe('Relative or absolute post date (e.g. "2h ago")'),
   platform: z
     .enum(["X", "YouTube", "Reddit", "Instagram", "Other"])
     .default("Other"),
-  engagement: z
-    .object({
-      likes: z.string().optional(),
-      retweets: z.string().optional(),
-      views: z.string().optional(),
-    })
-    .optional(),
-  mainText: z.string().describe("The primary content of the postcard"),
-  uiAnchors: z
-    .array(
-      z.object({
-        element: z.string(),
-        position: z.string(),
-        confidence: z.number(),
-      }),
-    )
-    .optional(),
+  engagement: z.record(z.string(), z.string()).optional(),
+  mainText: z
+    .string()
+    .describe("Character-for-character extraction of the primary post content"),
 });
 
 export type Postcard = z.infer<typeof PostcardSchema>;
 
-export const OCRResultSchema = z.object({
-  markdown: z
-    .string()
-    .describe("Raw extracted text in interleaved Markdown format"),
+export const PostcardResultSchema = z.object({
   postcard: PostcardSchema,
+  markdown: z.string(),
 });
 
-export type OCRResult = z.infer<typeof OCRResultSchema>;
+export type PostcardResult = z.infer<typeof PostcardResultSchema>;
 
 export async function extractPostcard(
   imageBuffer: Buffer,
   mimeType: string = "image/png",
-): Promise<OCRResult> {
+): Promise<PostcardResult> {
   const { output } = await generateText({
     model: google("gemini-1.5-flash"),
     maxRetries: 0,
     output: Output.object({
-      schema: z.object({
-        markdown: z
-          .string()
-          .describe("Raw extracted text in interleaved Markdown format"),
-        postcard: PostcardSchema,
-      }),
+      schema: PostcardResultSchema,
     }),
     messages: [
       {

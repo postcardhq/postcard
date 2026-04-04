@@ -12,6 +12,12 @@
 **Challenge:** Rebuilding trust in a "post-truth" digital era.  
 **Pitch Script:** [View Video Script](./PITCH.md)
 
+## How it works
+
+**User flow:** Enter Post URL → Forensic Pipeline Runs → Postcard Score + Subscore Breakdown appears.
+
+Postcard prioritizes the direct URL entrypoint to ensure absolute forensic precision, while maintaining support for screenshot-to-URL resolution as an additional quality-of-life feature.
+
 ## What it does
 
 **Postcard** is a digital forensics pipeline that takes a social media post URL, traces it back to its original source, and produces a **postcard score (0–100%)** measuring how much the content has drifted from the truth.
@@ -24,12 +30,12 @@ Screenshots strip all context. By the time something goes viral, it's been cropp
 
 ### The solution: the "Postcard" pipeline
 
-We built a 4-stage forensic pipeline that analyzes the "DNA" of a screenshot rather than just its pixels:
+We built a 4-stage forensic pipeline focused on deep audit log generation and corroboration for social media posts:
 
-1. **Vision Inference:** Gemini extracts handles, timestamps, and engagement "fingerprints."
-2. **Grounded Navigation:** Synthesizes high-precision search queries to find the source URL.
-3. **Multimodal Scrape:** Jina Reader inests live content to verify consistency.
-4. **Corroboration Audit:** Deep search across trusted domains (X, Reddit, News) to verify claims.
+1. **URL Entrypoint:** Users submit the direct source URL for forensic verification.
+2. **Multimodal Ingest:** Jina Reader ingests live content to establish ground truth.
+3. **Forensic Audit:** Playwright and direct site checks verify origin and temporal alignment.
+4. **Corroboration:** Deep search across trusted domains (X, Reddit, News) to verify claims.
 
 ## Documentation
 
