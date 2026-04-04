@@ -199,3 +199,248 @@ const TotalScore =
 - **Drag-and-drop:** Users upload screenshots via a central landing zone.
 - **Real-time audit log:** The dashboard displays live updates (e.g., "Synthesizing queries...", "Auditing source...") to keep users engaged.
 - **Progressive disclosure:** The interface shows the high-level score first, then allows users to expand for a detailed subscore breakdown and LLM reasoning.
+### Overall Postmark Score
+
+```
+Postmark (%) = (
+  WEIGHTS.ORIGIN        × Origin
+  + WEIGHTS.CORROBORATION × Corroboration
+  + WEIGHTS.BIAS          × Bias
+  + WEIGHTS.TEMPORAL      × Temporal
+) × 100
+```
+
+### UI: Progressive Disclosure
+
+- **Top level:** Postmark Score as a single percentage (e.g., "73%")
+- **Expandable:** Subscore breakdown (Origin: ✓, Corroboration: 2/3 sources, Bias: minor framing shift, Temporal: 3hrs off)
+- **Further:** Full LLM narrative explanation
+
+---
+
+## 5. Vetted Source Allowlist (TLD-Permissive)
+
+A source is "vetted" if it belongs to a recognized institutional or journalistic TLD:
+
+| Category | TLDs |
+|----------|------|
+| Government | `.gov`, `.mil` |
+| Academic | `.edu`, `.ac.uk`, `.ac.*` (international) |
+| NGOs / Nonprofits | `.org` |
+| News / Journalism | See below |
+
+**News domains (initial allowlist):**
+```
+reuters.com, apnews.com, ap.co, nytimes.com, washingtonpost.com,
+wsj.com, theguardian.com, bbc.com, bbc.co.uk, cnn.com, foxnews.com,
+nbcnews.com, abcnews.com, abc.net.au, cbsnews.com, pbs.org,
+npr.org, usatoday.com, latimes.com, politico.com, axios.com,
+huffpost.com, theatlantic.com, wired.com, arstechnica.com,
+techcrunch.com, theverge.com, independent.co.uk, dailymail.co.uk,
+mirror.co.uk, express.co.uk, sky.com, newsweek.com, time.com,
+forbes.com, bloomberg.com, reutersagency.com
+```
+
+**TLD-permissive logic:** Any domain ending in `.gov`, `.mil`, `.edu`, `.ac.*`, or `.org` is automatically vetted. No need to enumerate every subdomain.
+
+---
+
+## 6. Bias Score — LLM as Judge
+
+**Method:** LLM compares screenshot text against fetched source (or corroboration results).
+
+**Prompt (simplified):**
+```
+You are a forensic media analyst. Compare the original text (A) against the screenshot text (B).
+
+Assess:
+1. Caption changes — what text was added, removed, or altered?
+2. Attribution drift — was the author credited correctly?
+3. Framing shifts — was the editorial angle changed?
+4. Context removal — was surrounding context stripped?
+
+Output a score 0–100 where 100 = identical framing, 0 = completely distorted.
+Also output a short narrative explanation of what changed.
+```
+
+**Important:** Due to the probabilistic nature of LLMs, repeated runs will NOT produce identical scores but will be **consistent within an acceptable range**. This is expected.
+
+---
+
+## 7. Caching (SQLite)
+
+**Cache key:** MD5 hash of uploaded image bytes  
+**Cache value:** Full analysis result (Postmark Score, all subscores, URL found, narrative)
+
+**Flow:**
+1. User uploads image
+2. Compute MD5 hash
+3. Check SQLite for existing result → instant response if hit
+4. If miss → run pipeline → store result → return
+
+---
+
+## 8. UI / UX
+
+- **Mobile-first responsive** — follows best practices, no bloat
+- **Dark mode** — `prefers-color-scheme` media query (no toggle needed)
+- **Minimal** — Black/dark background
+- **Core interaction:**
+  1. Drag-and-drop or tap to upload
+  2. Submit → loading state
+  3. Result: Postmark Score (%) + expand for subscore breakdown
+
+---
+
+## 9. Navigator Agent — System Prompt
+
+```
+You are the Postcard Navigator Agent. Given OCR output from a social media screenshot, find the original source URL.
+
+INPUT:
+- Extracted text (caption, comment, post body)
+- Platform clues (Instagram UI, X/Twitter blue check, YouTube thumbnail style, Reddit upvote icon, etc.)
+- Any @handles, timestamps, engagement counts
+
+TASK:
+1. Identify the most search-dense phrase (the "hook")
+2. Combine with platform context to generate 2–3 targeted queries
+3. Prioritize exact-match searches with quotes and site: operators
+4. Return candidate source URLs ranked by confidence
+
+OUTPUT:
+{
+  "candidates": [
+    { "url": "...", "query": "...", "confidence": 0.9 }
+  ]
+}
+
+CONSTRAINTS:
+- Maximum 3 search queries
+- Prefer primary sources over aggregators
+- Bias toward recent content (last 90 days) unless OCR shows older timestamp
+```
+
+---
+
+## 10. Feature Priority
+
+### Must Ship (MVP)
+- [ ] Image upload form (drag-and-drop)
+- [ ] Step 1: Post Locator (Gemini 3+ multimodal → post URL)
+- [ ] Step 2: URL fetch + metadata extraction
+- [ ] Step 3: Corroboration search (Gemini Google Search tool)
+- [ ] Step 4: Bias assessment (LLM judge)
+- [ ] Step 5: Postmark Score + progressive disclosure
+- [ ] SQLite caching
+- [ ] Deployed live URL (Vercel)
+
+### Future Work
+- [ ] Wayback Machine historical lookup
+- [ ] Weight optimization (labeled dataset or user feedback)
+- [ ] Mobile app (Swift/Expo)
+- [ ] Opinion vs. factual disambiguation
+
+---
+
+## 11. Tech Stack
+
+- **Framework:** Next.js (TypeScript)
+- **Styling:** Tailwind CSS
+- **Hosting:** Vercel
+- **Validation:** Zod
+- **AI:** AI SDK (vcore) with multimodal Gemini (text + file inputs)
+- **Persistence:** SQLite
+- **API Style:** REST, Google AIPs compliant
+
+**Key API:** `generativeLanguage.googleapis.com` — configure in [Settings > Advanced](/?t=settings&s=advanced) as `GEMINI_API_KEY`.
+
+## 12. REST API Design
+
+*Follows [Google AIP-121 Resource-Oriented Design](https://google.aip.dev/121) and [AIP-122 Standard Methods](https://google.aip.dev/122).*
+
+### Resource Model
+
+**Analysis** is the primary resource. An analysis represents a single screenshot submitted for Postcard verification.
+
+```
+Analysis {
+  id:            string          // Server-assigned UUID
+  status:        "processing" | "done" | "error"
+  postmarkScore: number | null   // 0–100, null until done
+  subscores: {
+    origin:        number | null
+    corroboration: number | null
+    bias:          number | null
+    temporal:      number | null
+  } | null
+  input: {
+    screenshotUrl: string        // Presigned or base64 ref
+  }
+  result: {
+    extractedClaim: string | null
+    postUrl:         string | null
+    isVetted:        boolean | null
+    vettedSources:   string[] | null
+  } | null
+  corroboration: {
+    sources: Array<{
+      url:    string
+      title:  string
+      date:   string
+      vetted: boolean
+    }>
+  } | null
+  bias: {
+    summary: string | null
+    rating:  "low" | "medium" | "high" | null
+  } | null
+  error: string | null
+  createdAt: string              // RFC 3339
+  updatedAt: string              // RFC 3339
+}
+```
+
+### Endpoints
+
+#### Analyze (create analysis)
+```
+POST /api/analyses
+Content-Type: multipart/form-data
+
+Body: { file: ImageFile }
+
+201 Created
+{
+  "id": "a1b2c3d4",
+  "status": "processing",
+  "createdAt": "2026-04-03T21:00:00Z"
+}
+```
+
+#### Get Analysis (standard get)
+```
+GET /api/analyses/{id}
+
+200 OK → Analysis (full object, see schema above)
+404 Not Found → { "error": "Analysis not found" }
+```
+
+### Error Contracts
+All errors follow AIP-193:
+```
+{
+  "error": {
+    "code":    400 | 404 | 500,
+    "message": "Human-readable description",
+    "details": []  // optional Zod-validation errors
+  }
+}
+```
+
+### Notes
+- No batch or list endpoints for v1 hackathon scope
+- No authentication in v1 (single-environment, venue demo)
+- Polling `GET /api/analyses/{id}` until `status === "done"` constitutes the long-running operation pattern (AIP-151)
+
+*Last updated: 2026-04-03 22:00 UTC*
