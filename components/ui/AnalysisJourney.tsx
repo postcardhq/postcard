@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import type { PostcardReport } from "@/src/lib/postcard";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -208,296 +209,66 @@ function Mailbox({
   );
 }
 
-/* ── Results Postcard ─────────────────────────────── */
-function ResultsPostcard({ imageUrl }: { imageUrl: string }) {
-  const score = 72;
-  const status =
-    score >= 90
-      ? "✓ Verified Origin"
-      : score >= 50
-        ? "⚠ Unreliable Postmark"
-        : "✗ Fabricated";
-  const statusColor =
-    score >= 90
-      ? "var(--postal-green-mid)"
-      : score >= 50
-        ? "var(--postal-amber)"
-        : "var(--postal-red)";
+/* ── SSE parser ───────────────────────────────────── */
+async function fetchReport(file: File): Promise<PostcardReport> {
+  const formData = new FormData();
+  formData.append("file", file);
 
-  return (
-    <motion.div
-      initial={{ scale: 0.85, opacity: 0, rotateY: -20 }}
-      animate={{ scale: 1, opacity: 1, rotateY: 0 }}
-      transition={{ duration: 0.9, ease: EASE }}
-      className="relative shadow-2xl"
-      style={{
-        width: "min(680px, 95vw)",
-        background: "var(--postal-paper)",
-        border: "1px solid var(--postal-ink-faint)",
-        borderRadius: "3px",
-      }}
-    >
-      {/* Airmail top border */}
-      <div
-        className="h-4"
-        style={{
-          backgroundImage: `repeating-linear-gradient(
-            -45deg,
-            var(--postal-red) 0px, var(--postal-red) 7px,
-            transparent 7px, transparent 14px,
-            var(--postal-blue) 14px, var(--postal-blue) 21px,
-            transparent 21px, transparent 28px
-          )`,
-        }}
-      />
+  const response = await fetch("/api/analyses", {
+    method: "POST",
+    body: formData,
+  });
 
-      <div className="flex gap-0">
-        {/* Left — image side */}
-        <div
-          className="relative flex-shrink-0 w-52 overflow-hidden"
-          style={{ borderRight: "1px solid var(--postal-ink-faint)" }}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={imageUrl}
-            alt="Evidence"
-            className="w-full h-full object-cover"
-            style={{ minHeight: "240px" }}
-          />
+  if (!response.ok || !response.body) {
+    throw new Error(`Analysis request failed: ${response.status}`);
+  }
 
-          {/* Cancel stamp overlay */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <svg
-              viewBox="0 0 90 90"
-              className="w-28 h-28 opacity-60"
-              fill="none"
-            >
-              <circle
-                cx="45"
-                cy="45"
-                r="40"
-                stroke="var(--postal-red)"
-                strokeWidth="3"
-              />
-              <line
-                x1="5"
-                y1="36"
-                x2="85"
-                y2="36"
-                stroke="var(--postal-red)"
-                strokeWidth="3"
-              />
-              <line
-                x1="5"
-                y1="45"
-                x2="85"
-                y2="45"
-                stroke="var(--postal-red)"
-                strokeWidth="3"
-              />
-              <line
-                x1="5"
-                y1="54"
-                x2="85"
-                y2="54"
-                stroke="var(--postal-red)"
-                strokeWidth="3"
-              />
-            </svg>
-          </div>
-        </div>
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
 
-        {/* Right — message side */}
-        <div className="flex-1 p-6">
-          {/* Postcard header */}
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <h3
-                className="text-2xl font-black italic leading-none"
-                style={{
-                  fontFamily: "var(--font-display)",
-                  color: "var(--postal-ink)",
-                }}
-              >
-                Postcard
-              </h3>
-              <p
-                className="text-[10px] tracking-widest uppercase mt-0.5"
-                style={{
-                  fontFamily: "var(--font-serif)",
-                  color: "var(--postal-ink-muted)",
-                }}
-              >
-                Forensics Report
-              </p>
-            </div>
-            {/* Stamp graphic */}
-            <div
-              className="w-14 h-16 flex flex-col items-center justify-center text-center"
-              style={{
-                border: "1px solid var(--postal-ink-faint)",
-                background: "var(--postal-stamp-bg)",
-                borderRadius: "1px",
-              }}
-            >
-              <span style={{ fontSize: "22px" }}>✉</span>
-              <span
-                className="text-[7px] leading-tight mt-1"
-                style={{
-                  fontFamily: "var(--font-serif)",
-                  color: "var(--postal-ink)",
-                }}
-              >
-                POSTCARD
-                <br />
-                FORENSICS
-              </span>
-            </div>
-          </div>
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
 
-          {/* Divider */}
-          <div
-            className="h-px mb-4"
-            style={{ background: "var(--postal-ink-faint)" }}
-          />
+    const blocks = buffer.split("\n\n");
+    buffer = blocks.pop() ?? "";
 
-          {/* Postmark Score */}
-          <div className="mb-4">
-            <p
-              className="text-[10px] tracking-[0.2em] uppercase mb-2"
-              style={{
-                fontFamily: "var(--font-serif)",
-                color: "var(--postal-ink-muted)",
-              }}
-            >
-              Postmark Score
-            </p>
-            <div className="flex items-center gap-3">
-              {/* Score bar */}
-              <div
-                className="flex-1 h-2 rounded-full overflow-hidden"
-                style={{ background: "var(--postal-paper-3)" }}
-              >
-                <motion.div
-                  className="h-full rounded-full"
-                  style={{ background: statusColor }}
-                  initial={{ width: 0 }}
-                  animate={{ width: `${score}%` }}
-                  transition={{ duration: 1.2, delay: 0.4, ease: EASE }}
-                />
-              </div>
-              <span
-                className="text-xl font-bold w-12 text-right"
-                style={{
-                  fontFamily: "var(--font-display)",
-                  color: "var(--postal-ink)",
-                }}
-              >
-                {score}
-              </span>
-            </div>
-            <p
-              className="text-xs mt-1.5 font-semibold"
-              style={{ fontFamily: "var(--font-serif)", color: statusColor }}
-            >
-              {status}
-            </p>
-          </div>
+    for (const block of blocks) {
+      const eventMatch = block.match(/^event: (\w+)/m);
+      const dataMatch = block.match(/^data: (.+)/m);
+      if (!eventMatch || !dataMatch) continue;
 
-          {/* Divider */}
-          <div
-            className="h-px mb-4"
-            style={{ background: "var(--postal-ink-faint)" }}
-          />
+      const event = eventMatch[1];
+      const payload = JSON.parse(dataMatch[1]);
 
-          {/* Travel Log */}
-          <div>
-            <p
-              className="text-[10px] tracking-[0.2em] uppercase mb-2"
-              style={{
-                fontFamily: "var(--font-serif)",
-                color: "var(--postal-ink-muted)",
-              }}
-            >
-              Travel Log
-            </p>
-            {[
-              {
-                hop: "01",
-                label: "Source",
-                value: "x.com/@originaluser — Apr 1, 2026",
-              },
-              {
-                hop: "02",
-                label: "Platform",
-                value: "X / Twitter (verified handle)",
-              },
-              {
-                hop: "03",
-                label: "Drift",
-                value: "Caption altered — moderate divergence",
-              },
-            ].map(({ hop, label, value }) => (
-              <div key={hop} className="flex gap-2 mb-1.5">
-                <span
-                  className="text-[9px] w-6 text-center flex-shrink-0 mt-0.5 rounded-[1px] px-0.5"
-                  style={{
-                    fontFamily: "var(--font-serif)",
-                    color: "var(--postal-paper)",
-                    background: "var(--postal-ink-muted)",
-                  }}
-                >
-                  {hop}
-                </span>
-                <div>
-                  <span
-                    className="text-[10px] font-semibold"
-                    style={{
-                      fontFamily: "var(--font-serif)",
-                      color: "var(--postal-ink)",
-                    }}
-                  >
-                    {label}:{" "}
-                  </span>
-                  <span
-                    className="text-[10px]"
-                    style={{
-                      fontFamily: "var(--font-serif)",
-                      color: "var(--postal-ink-muted)",
-                    }}
-                  >
-                    {value}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      if (event === "complete") return payload.report as PostcardReport;
+      if (event === "error") throw new Error(payload.error);
+    }
+  }
 
-      {/* Bottom airmail stripe */}
-      <div
-        className="h-4"
-        style={{
-          backgroundImage: `repeating-linear-gradient(
-            -45deg,
-            var(--postal-red) 0px, var(--postal-red) 7px,
-            transparent 7px, transparent 14px,
-            var(--postal-blue) 14px, var(--postal-blue) 21px,
-            transparent 21px, transparent 28px
-          )`,
-        }}
-      />
-    </motion.div>
-  );
+  throw new Error("Stream ended without a result.");
 }
 
 /* ── Main AnalysisJourney ─────────────────────────── */
 
-export function AnalysisJourney({ imageUrl }: { imageUrl: string }) {
+export function AnalysisJourney({
+  imageUrl,
+  file,
+  onComplete,
+}: {
+  imageUrl: string;
+  file: File;
+  onComplete: (report: PostcardReport) => void;
+}) {
   const [stage, setStage] = useState<AnalysisStage>(0);
-  const [showResults, setShowResults] = useState(false);
+  const [animDone, setAnimDone] = useState(false);
+  const pendingReport = useRef<PostcardReport | null>(null);
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
 
+  /* Animation timer */
   useEffect(() => {
     let elapsed = 0;
     const timers: ReturnType<typeof setTimeout>[] = [];
@@ -507,9 +278,32 @@ export function AnalysisJourney({ imageUrl }: { imageUrl: string }) {
         setTimeout(() => setStage((i + 1) as AnalysisStage), elapsed),
       );
     });
-    timers.push(setTimeout(() => setShowResults(true), elapsed + 1200));
+    timers.push(setTimeout(() => setAnimDone(true), elapsed + 1200));
     return () => timers.forEach(clearTimeout);
   }, []);
+
+  /* API call — starts immediately in parallel with animation */
+  useEffect(() => {
+    fetchReport(file)
+      .then((report) => {
+        pendingReport.current = report;
+        // If animation already finished, fire immediately
+        if (animDone) onCompleteRef.current(report);
+      })
+      .catch((err) => {
+        console.error("Analysis failed:", err);
+        // Still resolve with null so the user isn't stuck — page handles the error
+        if (animDone) onCompleteRef.current(null as unknown as PostcardReport);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [file]);
+
+  /* When animation finishes, fire if report is already back */
+  useEffect(() => {
+    if (animDone && pendingReport.current) {
+      onCompleteRef.current(pendingReport.current);
+    }
+  }, [animDone]);
 
   // Airplane x position across the 1200-wide SVG viewBox
   const planeX =
@@ -621,7 +415,7 @@ export function AnalysisJourney({ imageUrl }: { imageUrl: string }) {
       {/* Stage label */}
       <div className="absolute top-6 left-1/2 -translate-x-1/2 text-center">
         <AnimatePresence mode="wait">
-          {!showResults && stage < 4 && (
+          {stage < 4 && (
             <motion.div
               key={stage}
               initial={{ opacity: 0, y: -10 }}
@@ -655,57 +449,59 @@ export function AnalysisJourney({ imageUrl }: { imageUrl: string }) {
               </p>
             </motion.div>
           )}
+
+          {/* Waiting for API after animation completes */}
+          {stage >= 4 && !animDone && (
+            <motion.div
+              key="waiting"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="px-5 py-3 rounded-[2px] text-center"
+              style={{
+                background: "rgba(253,246,227,0.9)",
+                border: "1px solid var(--postal-ink-faint)",
+                backdropFilter: "blur(4px)",
+              }}
+            >
+              <p
+                className="text-xs tracking-[0.2em] uppercase mb-0.5"
+                style={{
+                  fontFamily: "var(--font-serif)",
+                  color: "var(--postal-ink-muted)",
+                }}
+              >
+                Finalising
+              </p>
+              <p
+                className="text-sm italic"
+                style={{
+                  fontFamily: "var(--font-serif)",
+                  color: "var(--postal-ink)",
+                }}
+              >
+                Your postcard is arriving…
+              </p>
+            </motion.div>
+          )}
         </AnimatePresence>
       </div>
 
-      {/* Results postcard */}
-      <AnimatePresence>
-        {showResults && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
-            className="absolute inset-0 flex items-center justify-center px-4"
-            style={{
-              background: "rgba(253,246,227,0.85)",
-              backdropFilter: "blur(6px)",
-            }}
-          >
-            <div className="flex flex-col items-center gap-6">
-              <motion.p
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="text-sm italic text-center"
-                style={{
-                  fontFamily: "var(--font-serif)",
-                  color: "var(--postal-ink-muted)",
-                }}
-              >
-                Your postcard has arrived.
-              </motion.p>
-              <ResultsPostcard imageUrl={imageUrl} />
-              <motion.button
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.8 }}
-                className="text-xs tracking-widest uppercase px-6 py-2"
-                style={{
-                  fontFamily: "var(--font-serif)",
-                  color: "var(--postal-ink-muted)",
-                  border: "1px solid var(--postal-ink-faint)",
-                  background: "var(--postal-paper)",
-                  borderRadius: "2px",
-                  cursor: "pointer",
-                }}
-                onClick={() => window.location.reload()}
-              >
-                Trace Another Post
-              </motion.button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Preview thumbnail — bottom-right */}
+      <motion.div
+        className="absolute bottom-6 right-6"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.5 }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={imageUrl}
+          alt="Evidence preview"
+          className="w-16 h-16 object-cover opacity-60"
+          style={{ border: "1px solid var(--postal-ink-faint)" }}
+        />
+      </motion.div>
     </div>
   );
 }
