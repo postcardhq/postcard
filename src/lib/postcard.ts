@@ -223,6 +223,58 @@ export async function processPostcardFromUrl(
     throw new Error(`Jina Reader failed: ${jinaResponse.status}`);
   }
   const markdown = await jinaResponse.text();
+
+  const BLOCKING_PATTERNS = [
+    "log in with facebook",
+    "log in to continue",
+    "sign up to see",
+    "create an account",
+    "this content is not available",
+    "content isn't available",
+    "rate limit",
+    "access denied",
+    "forbidden",
+    "blocked",
+    "oembed error",
+  ];
+
+  const isBlocked = BLOCKING_PATTERNS.some((pattern) =>
+    markdown.toLowerCase().includes(pattern),
+  );
+
+  const isMostlyLoginPage =
+    markdown.toLowerCase().includes("log into instagram") &&
+    (markdown.toLowerCase().includes("mobile number") ||
+      markdown.toLowerCase().includes("password"));
+
+  if (
+    !markdown ||
+    markdown.trim().length < 50 ||
+    isBlocked ||
+    isMostlyLoginPage
+  ) {
+    return {
+      url,
+      markdown: "",
+      platform: inferPlatform(url),
+      corroboration: {
+        primarySources: [],
+        queriesExecuted: [],
+        verdict: "insufficient_data" as const,
+        summary:
+          "Unable to access this content. The link may require login or may be restricted.",
+        confidenceScore: 0,
+        corroborationLog: [
+          isBlocked || isMostlyLoginPage
+            ? "Jina Reader was blocked by the platform."
+            : "Jina Reader returned insufficient content for analysis.",
+        ],
+      },
+      postcardScore: 0,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   progress("scraped", `Fetched ${markdown.length} characters`, 0.3);
 
   const platform = inferPlatform(url);

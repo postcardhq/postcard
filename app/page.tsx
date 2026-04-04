@@ -16,6 +16,7 @@ export default function PostcardHome() {
 
   const handleUrlSubmitted = useCallback((url: string) => {
     setPostUrl(url);
+    setReport(null);
     setPageStage("analyzing");
   }, []);
 
@@ -24,8 +25,20 @@ export default function PostcardHome() {
     setPageStage("results");
   }, []);
 
+  const handleReset = useCallback(() => {
+    setPostUrl(null);
+    setReport(null);
+    setPageStage("upload");
+  }, []);
+
   if (pageStage === "analyzing" && postUrl) {
-    return <AnalysisJourney postUrl={postUrl} onComplete={handleReportReady} />;
+    return (
+      <AnalysisJourney
+        postUrl={postUrl}
+        onComplete={handleReportReady}
+        onReset={handleReset}
+      />
+    );
   }
 
   if (pageStage === "results" && report) {

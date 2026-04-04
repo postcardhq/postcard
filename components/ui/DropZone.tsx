@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef, DragEvent } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
@@ -310,7 +310,6 @@ export function DropZone({
 }: {
   onUrlSubmitted: (url: string) => void;
 }) {
-  const [dragOver, setDragOver] = useState(false);
   const [animating, setAnimating] = useState(false);
   const [postUrl, setPostUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -331,26 +330,6 @@ export function DropZone({
     setPostUrl(url);
     setAnimating(true);
   }, []);
-
-  const onDragOver = useCallback((e: DragEvent) => {
-    e.preventDefault();
-    setDragOver(true);
-  }, []);
-  const onDragLeave = useCallback((e: DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-  }, []);
-  const onDrop = useCallback(
-    (e: DragEvent) => {
-      e.preventDefault();
-      setDragOver(false);
-      const url =
-        e.dataTransfer.getData("text/uri-list") ||
-        e.dataTransfer.getData("text/plain");
-      if (url) handleSubmit(url);
-    },
-    [handleSubmit],
-  );
 
   const handleAnimationComplete = useCallback(() => {
     if (postUrl) {
@@ -397,17 +376,12 @@ export function DropZone({
           </div>
 
           <div
-            className="relative transition-all duration-200"
+            className="relative"
             style={{
-              boxShadow: dragOver
-                ? `0 0 0 3px var(--postal-paper), 0 0 0 5px var(--postal-red), 0 8px 32px rgba(44,36,22,0.18)`
-                : `0 0 0 3px var(--postal-paper), 0 0 0 5px var(--postal-ink-faint), 0 4px 16px rgba(44,36,22,0.1)`,
+              boxShadow: `0 0 0 3px var(--postal-paper), 0 0 0 5px var(--postal-ink-faint), 0 4px 16px rgba(44,36,22,0.1)`,
               borderRadius: "2px",
-              background: dragOver ? "#fff8ef" : "var(--postal-paper)",
+              background: "var(--postal-paper)",
             }}
-            onDragOver={onDragOver}
-            onDragLeave={onDragLeave}
-            onDrop={onDrop}
             role="region"
             aria-label="Post URL input"
           >
@@ -424,61 +398,7 @@ export function DropZone({
               }}
             />
 
-            <div
-              className="m-4 flex flex-col items-center justify-center py-12 rounded-[1px]"
-              style={{
-                border: `2px dashed ${dragOver ? "var(--postal-red)" : "var(--postal-ink-faint)"}`,
-                transition: "border-color 0.2s",
-              }}
-            >
-              <div className="mb-5">
-                <svg viewBox="0 0 48 48" className="w-12 h-12" fill="none">
-                  <rect
-                    x="4"
-                    y="12"
-                    width="40"
-                    height="28"
-                    rx="2"
-                    fill="var(--postal-paper-2)"
-                    stroke={
-                      dragOver ? "var(--postal-red)" : "var(--postal-ink-faint)"
-                    }
-                    strokeWidth="2"
-                    style={{ transition: "stroke 0.2s" }}
-                  />
-                  <polyline
-                    points="4,14 24,28 44,14"
-                    stroke={
-                      dragOver ? "var(--postal-red)" : "var(--postal-ink-faint)"
-                    }
-                    strokeWidth="2"
-                    style={{ transition: "stroke 0.2s" }}
-                  />
-                  <path
-                    d="M18 20h-2M18 32h-2"
-                    stroke="var(--postal-red)"
-                    strokeWidth="2"
-                  />
-                  <path
-                    d="M20 18h2c2 0 4 2 4 4v2M28 30h2c-2 0-4-2-4-4v-2"
-                    stroke="var(--postal-red)"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </div>
-
-              <p
-                className="text-base mb-4"
-                style={{
-                  fontFamily: "var(--font-serif)",
-                  color: "var(--postal-ink)",
-                  fontStyle: "italic",
-                }}
-              >
-                Enter post URL to trace
-              </p>
-
+            <div className="m-6 flex flex-col items-center">
               <input
                 ref={inputRef}
                 type="url"

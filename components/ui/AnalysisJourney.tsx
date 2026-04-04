@@ -253,14 +253,17 @@ async function fetchReportWithProgress(
 export function AnalysisJourney({
   postUrl,
   onComplete,
+  onReset,
 }: {
   postUrl: string;
   onComplete: (report: PostcardReport) => void;
+  onReset: () => void;
 }) {
   const [stage, setStage] = useState<AnalysisStage>(0);
   const [stageLabel, setStageLabel] = useState("Dispatched");
   const [stageDetail, setStageDetail] = useState("Evidence en route…");
   const [error, setError] = useState<string | null>(null);
+  const [isInsufficientData, setIsInsufficientData] = useState(false);
   const pendingReport = useRef<PostcardReport | null>(null);
   const onCompleteRef = useRef(onComplete);
   const hasCompletedRef = useRef(false);
@@ -282,6 +285,16 @@ export function AnalysisJourney({
       else setStage(4);
     })
       .then((report) => {
+        if (report.corroboration.verdict === "insufficient_data") {
+          setError(
+            report.corroboration.summary ||
+              "Unable to locate the linked content. The URL may be inaccessible or require authentication.",
+          );
+          if (!hasCompletedRef.current) {
+            hasCompletedRef.current = true;
+          }
+          return;
+        }
         pendingReport.current = report;
         if (!hasCompletedRef.current) {
           hasCompletedRef.current = true;
@@ -409,13 +422,13 @@ export function AnalysisJourney({
                 className="text-lg font-bold"
                 style={{
                   fontFamily: "var(--font-serif)",
-                  color: "var(--postal-red)",
+                  color: "var(--postal-ink)",
                 }}
               >
-                Something went wrong
+                Unable to Trace Post
               </p>
               <p
-                className="text-sm"
+                className="text-sm text-center max-w-md"
                 style={{
                   fontFamily: "var(--font-serif)",
                   color: "var(--postal-ink-muted)",
@@ -433,7 +446,7 @@ export function AnalysisJourney({
                   borderRadius: "2px",
                   cursor: "pointer",
                 }}
-                onClick={() => window.location.reload()}
+                onClick={onReset}
               >
                 Try Again
               </button>

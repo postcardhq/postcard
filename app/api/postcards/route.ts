@@ -52,17 +52,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         let forensicReport;
 
         if (image) {
-          // Image-based analysis
-          const buffer = Buffer.from(image, "base64");
-          forensicReport = await processPostcardFromImage(buffer, "image/png");
-          report = {
-            url: forensicReport.triangulation.targetUrl || "",
-            markdown: forensicReport.ocr.markdown,
-            platform: forensicReport.ocr.postmark.platform,
-            corroboration: forensicReport.corroboration,
-            postcardScore: forensicReport.audit.totalScore,
-            timestamp: forensicReport.timestamp,
-          };
+          send("error", {
+            error:
+              "Image upload is not yet supported. Please submit a post URL instead.",
+          });
+          controller.close();
+          return;
         } else {
           // URL-based analysis
           report = await processPostcardFromUrl(
