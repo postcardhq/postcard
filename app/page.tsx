@@ -9,22 +9,21 @@ type PageStage = "upload" | "analyzing";
 
 export default function PostcardHome() {
   const [pageStage, setPageStage] = useState<PageStage>("upload");
-  const [evidenceUrl, setEvidenceUrl] = useState<string | null>(null);
+  const [postUrl, setPostUrl] = useState<string | null>(null);
 
-  const handleFileSubmitted = useCallback((file: File) => {
-    const url = URL.createObjectURL(file);
-    setEvidenceUrl(url);
+  const handleUrlSubmitted = useCallback((url: string) => {
+    setPostUrl(url);
     setPageStage("analyzing");
   }, []);
 
-  if (pageStage === "analyzing" && evidenceUrl) {
-    return <AnalysisJourney imageUrl={evidenceUrl} />;
+  if (pageStage === "analyzing" && postUrl) {
+    return <AnalysisJourney postUrl={postUrl} />;
   }
 
   return (
     <main>
       <Hero />
-      <DropZone onFileSubmitted={handleFileSubmitted} />
+      <DropZone onUrlSubmitted={handleUrlSubmitted} />
     </main>
   );
 }

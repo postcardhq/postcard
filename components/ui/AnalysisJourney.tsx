@@ -209,7 +209,7 @@ function Mailbox({
 }
 
 /* ── Results Postcard ─────────────────────────────── */
-function ResultsPostcard({ imageUrl }: { imageUrl: string }) {
+function ResultsPostcard({ postUrl }: { postUrl: string }) {
   const score = 72;
   const status =
     score >= 90
@@ -259,7 +259,7 @@ function ResultsPostcard({ imageUrl }: { imageUrl: string }) {
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={imageUrl}
+            src={postUrl}
             alt="Evidence"
             className="w-full h-full object-cover"
             style={{ minHeight: "240px" }}
@@ -494,7 +494,7 @@ function ResultsPostcard({ imageUrl }: { imageUrl: string }) {
 
 /* ── Main AnalysisJourney ─────────────────────────── */
 
-export function AnalysisJourney({ imageUrl }: { imageUrl: string }) {
+export function AnalysisJourney({ postUrl }: { postUrl: string }) {
   const [stage, setStage] = useState<AnalysisStage>(0);
   const [showResults, setShowResults] = useState(false);
 
@@ -684,7 +684,7 @@ export function AnalysisJourney({ imageUrl }: { imageUrl: string }) {
               >
                 Your postcard has arrived.
               </motion.p>
-              <ResultsPostcard imageUrl={imageUrl} />
+              <ResultsPostcard postUrl={postUrl} />
               <motion.button
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}

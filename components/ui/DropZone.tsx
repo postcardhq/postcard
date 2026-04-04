@@ -1,11 +1,16 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef, DragEvent, ChangeEvent } from "react";
+import {
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+  DragEvent,
+  ChangeEvent,
+} from "react";
 import { motion, AnimatePresence } from "motion/react";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
-const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
-const ACCEPTED_EXTS = ".jpg,.jpeg,.png,.webp";
 
 /* ── SVG paper airplane ───────────────────────────── */
 function PaperPlane({ className = "" }: { className?: string }) {
@@ -67,15 +72,14 @@ function PaperPlane({ className = "" }: { className?: string }) {
 type AnimStage = "envelope" | "folding" | "airplane" | "flying";
 
 function AirmailAnimation({
-  imageUrl,
+  postUrl,
   onComplete,
 }: {
-  imageUrl: string;
+  postUrl: string;
   onComplete: () => void;
 }) {
   const [stage, setStage] = useState<AnimStage>("envelope");
 
-  // Progress through stages automatically
   useEffect(() => {
     const t1 = setTimeout(() => setStage("folding"), 1800);
     const t2 = setTimeout(() => setStage("airplane"), 2800);
@@ -184,14 +188,17 @@ function AirmailAnimation({
               }}
             />
 
-            {/* Image inside */}
-            <div className="absolute inset-3 mt-3 mb-3 overflow-hidden rounded-[2px]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={imageUrl}
-                alt="Evidence"
-                className="w-full h-full object-cover"
-              />
+            {/* URL inside */}
+            <div className="absolute inset-3 mt-3 mb-3 flex items-center justify-center overflow-hidden rounded-[2px]">
+              <span
+                className="text-xs truncate px-2"
+                style={{
+                  fontFamily: "var(--font-serif)",
+                  color: "var(--postal-ink)",
+                }}
+              >
+                {postUrl}
+              </span>
             </div>
 
             {/* Corner stamp circles */}
@@ -214,7 +221,7 @@ function AirmailAnimation({
                 fontFamily: "var(--font-serif)",
               }}
             >
-              Evidence Submitted
+              URL Submitted
             </div>
           </motion.div>
         )}
@@ -313,41 +320,39 @@ function AirmailAnimation({
           fontFamily: "var(--font-serif)",
         }}
       >
-        Dispatching your evidence via airmail…
+        Dispatching your URL via airmail…
       </div>
     </div>
   );
 }
 
-/* ── Stamp perforated drop zone ───────────────────── */
+/* ── URL Input Card ───────────────────────────── */
 
 export function DropZone({
-  onFileSubmitted,
+  onUrlSubmitted,
 }: {
-  onFileSubmitted: (file: File) => void;
+  onUrlSubmitted: (url: string) => void;
 }) {
   const [dragOver, setDragOver] = useState(false);
   const [animating, setAnimating] = useState(false);
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [postUrl, setPostUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleFile = useCallback(async (file: File) => {
-    if (!ACCEPTED_TYPES.includes(file.type)) {
-      setError("Please submit a .jpg, .png, or .webp image.");
+  const handleSubmit = useCallback(async (url: string) => {
+    if (!url.trim()) {
+      setError("Please enter a post URL.");
+      return;
+    }
+    try {
+      new URL(url);
+    } catch {
+      setError("Please enter a valid URL.");
       return;
     }
     setError(null);
-    try {
-      const arrayBuffer = await file.arrayBuffer();
-      const bytes = new Uint8Array(arrayBuffer);
-      const base64 = btoa(Array.from(bytes).map(byte => String.fromCharCode(byte)).join(""));
-      setImageUrl(`data:${file.type};base64,${base64}`);
-      setAnimating(true);
-    } catch (err) {
-      console.error("File intake failure:", err);
-      setError("Data extraction failed. Please re-upload.");
-    }
+    setPostUrl(url);
+    setAnimating(true);
   }, []);
 
   const onDragOver = useCallback((e: DragEvent) => {
@@ -362,44 +367,33 @@ export function DropZone({
     (e: DragEvent) => {
       e.preventDefault();
       setDragOver(false);
-      const file = e.dataTransfer.files?.[0];
-      if (file) handleFile(file);
+      const url =
+        e.dataTransfer.getData("text/uri-list") ||
+        e.dataTransfer.getData("text/plain");
+      if (url) handleSubmit(url);
     },
-    [handleFile],
-  );
-  const onFileChange = useCallback(
-    (e: ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (file) handleFile(file);
-    },
-    [handleFile],
+    [handleSubmit],
   );
 
   const handleAnimationComplete = useCallback(() => {
-    if (imageUrl) {
-      // Convert back to File via fetch for the callback
-      fetch(imageUrl)
-        .then((r) => r.blob())
-        .then((blob) => {
-          const f = new File([blob], "evidence.jpg", { type: blob.type });
-          onFileSubmitted(f);
-        });
+    if (postUrl) {
+      onUrlSubmitted(postUrl);
     }
-  }, [imageUrl, onFileSubmitted]);
+  }, [postUrl, onUrlSubmitted]);
 
   return (
     <>
       {/* Animation overlay */}
       <AnimatePresence>
-        {animating && imageUrl && (
+        {animating && postUrl && (
           <AirmailAnimation
-            imageUrl={imageUrl}
+            postUrl={postUrl}
             onComplete={handleAnimationComplete}
           />
         )}
       </AnimatePresence>
 
-      {/* Drop zone card */}
+      {/* URL Input card */}
       <section
         className="w-full px-6 pb-20 pt-4"
         style={{ background: "var(--postal-paper)" }}
@@ -414,7 +408,7 @@ export function DropZone({
                 color: "var(--postal-ink)",
               }}
             >
-              Submit Your Evidence
+              Submit Your Post URL
             </h2>
             <p
               className="text-sm"
@@ -424,15 +418,14 @@ export function DropZone({
                 fontStyle: "italic",
               }}
             >
-              Drop a screenshot of the social media post you wish to trace.
+              Enter the URL of the social media post you wish to trace.
             </p>
           </div>
 
           {/* Stamp card */}
           <div
-            className="relative cursor-pointer transition-all duration-200"
+            className="relative transition-all duration-200"
             style={{
-              /* Stamp perforations: outer shadow dots */
               boxShadow: dragOver
                 ? `0 0 0 3px var(--postal-paper), 0 0 0 5px var(--postal-red), 0 8px 32px rgba(44,36,22,0.18)`
                 : `0 0 0 3px var(--postal-paper), 0 0 0 5px var(--postal-ink-faint), 0 4px 16px rgba(44,36,22,0.1)`,
@@ -442,9 +435,8 @@ export function DropZone({
             onDragOver={onDragOver}
             onDragLeave={onDragLeave}
             onDrop={onDrop}
-            onClick={() => inputRef.current?.click()}
-            role="button"
-            aria-label="Drop evidence image or click to browse"
+            role="region"
+            aria-label="Post URL input"
           >
             {/* Airmail top stripe */}
             <div
@@ -460,7 +452,7 @@ export function DropZone({
               }}
             />
 
-            {/* Interior dashed area */}
+            {/* URL Input area */}
             <div
               className="m-4 flex flex-col items-center justify-center py-12 rounded-[1px]"
               style={{
@@ -468,7 +460,7 @@ export function DropZone({
                 transition: "border-color 0.2s",
               }}
             >
-              {/* Upload icon — envelope with arrow */}
+              {/* Input icon — envelope with link */}
               <div className="mb-5">
                 <svg viewBox="0 0 48 48" className="w-12 h-12" fill="none">
                   <rect
@@ -492,79 +484,84 @@ export function DropZone({
                     strokeWidth="2"
                     style={{ transition: "stroke 0.2s" }}
                   />
-                  {/* Up arrow */}
-                  <line
-                    x1="24"
-                    y1="38"
-                    x2="24"
-                    y2="28"
+                  {/* Link icon */}
+                  <path
+                    d="M18 20h-2M18 32h-2"
                     stroke="var(--postal-red)"
                     strokeWidth="2"
-                    strokeDasharray="3 2"
                   />
-                  <polyline
-                    points="19,33 24,28 29,33"
+                  <path
+                    d="M20 18h2c2 0 4 2 4 4v2M28 30h2c-2 0-4-2-4-4v-2"
                     stroke="var(--postal-red)"
                     strokeWidth="2"
+                    strokeLinecap="round"
                   />
                 </svg>
               </div>
 
               <p
-                className="text-base mb-1"
+                className="text-base mb-4"
                 style={{
                   fontFamily: "var(--font-serif)",
                   color: "var(--postal-ink)",
                   fontStyle: "italic",
                 }}
               >
-                {dragOver ? "Release to dispatch" : "Drop your screenshot here"}
-              </p>
-              <p
-                className="text-sm mb-5"
-                style={{
-                  fontFamily: "var(--font-serif)",
-                  color: "var(--postal-ink-muted)",
-                }}
-              >
-                or
+                Enter post URL to trace
               </p>
 
-              {/* Browse button */}
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  inputRef.current?.click();
-                }}
-                className="px-6 py-2 text-sm transition-all duration-150"
+              {/* URL Input */}
+              <input
+                ref={inputRef}
+                type="url"
+                placeholder="https://x.com/user/status/1234567890"
+                className="w-full max-w-sm px-4 py-3 text-sm text-center"
                 style={{
                   fontFamily: "var(--font-serif)",
                   color: "var(--postal-ink)",
                   background: "var(--postal-paper-2)",
                   border: "1px solid var(--postal-ink-faint)",
                   borderRadius: "2px",
+                  outline: "none",
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = "var(--postal-ink)";
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = "var(--postal-ink-faint)";
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleSubmit(e.currentTarget.value);
+                  }
+                }}
+              />
+
+              {/* Submit button */}
+              <button
+                type="button"
+                className="mt-4 px-6 py-2 text-sm transition-all duration-150"
+                style={{
+                  fontFamily: "var(--font-serif)",
+                  color: "var(--postal-paper)",
+                  background: "var(--postal-ink)",
+                  border: "1px solid var(--postal-ink)",
+                  borderRadius: "2px",
                   letterSpacing: "0.04em",
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "var(--postal-paper-3)";
-                  e.currentTarget.style.borderColor = "var(--postal-ink-muted)";
+                  e.currentTarget.style.background = "var(--postal-ink-muted)";
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "var(--postal-paper-2)";
-                  e.currentTarget.style.borderColor = "var(--postal-ink-faint)";
+                  e.currentTarget.style.background = "var(--postal-ink)";
+                }}
+                onClick={() => {
+                  const url = inputRef.current?.value;
+                  if (url) handleSubmit(url);
                 }}
               >
-                Browse Files
+                Trace Post
               </button>
-
-              <input
-                ref={inputRef}
-                type="file"
-                accept={ACCEPTED_EXTS}
-                className="hidden"
-                onChange={onFileChange}
-              />
 
               <p
                 className="mt-5 text-xs tracking-widest uppercase"
@@ -573,7 +570,7 @@ export function DropZone({
                   color: "var(--postal-ink-faint)",
                 }}
               >
-                .jpg &nbsp;·&nbsp; .png &nbsp;·&nbsp; .webp
+                x.com &nbsp;·&nbsp; bluesky.app &nbsp;·&nbsp; threads.net
               </p>
             </div>
 
