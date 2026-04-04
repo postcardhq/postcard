@@ -262,18 +262,21 @@ export function DropZone({ onFileSubmitted }: { onFileSubmitted: (file: File) =>
   const inputRef = useRef<HTMLInputElement>(null)
 
   const handleFile = useCallback(
-    (file: File) => {
+    async (file: File) => {
       if (!ACCEPTED_TYPES.includes(file.type)) {
         setError('Please submit a .jpg, .png, or .webp image.')
         return
       }
       setError(null)
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        setImageUrl(e.target?.result as string)
+      try {
+        const bytes = await file.bytes()
+        const base64 = bytes.toBase64()
+        setImageUrl(`data:${file.type};base64,${base64}`)
         setAnimating(true)
+      } catch (err) {
+        console.error('File intake failure:', err)
+        setError('Data extraction failed. Please re-upload.')
       }
-      reader.readAsDataURL(file)
     },
     []
   )
