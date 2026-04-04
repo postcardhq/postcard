@@ -19,16 +19,46 @@ To set up the development environment, perform the following steps:
     npm install
     ```
 
-3.  **Verify the environment:**
+3.  **Configure environment variables:**
+    Copy the template to create your local environment file:
+
+    ```bash
+    cp .env.example .env
+    ```
+
+    Edit `.env` to include your `GOOGLE_GENERATIVE_AI_API_KEY` if you plan to use the live pipeline.
+
+4.  **Initialize the database:**
+    Sync the schema to your local SQLite file:
+
+    ```bash
+    npm run db:push
+    ```
+
+5.  **Verify the environment:**
 
     ```bash
     npm run check  # Run linting and type-checks
     ```
 
-4.  **Start the development server:**
+6.  **Start the development server:**
     ```bash
     npm run dev
     ```
+
+## Environment configuration
+
+Postcard supports two primary development modes, toggled via the `NEXT_PUBLIC_FAKE_PIPELINE` environment variable in your `.env` file.
+
+- **Fake Mode (`true`):** Uses mock data for all forensic stages. No Gemini API key or external scraping is required. This is the default for rapid UI/UX development.
+- **Live Mode (`false`):** Executes the full forensic pipeline (OCR, Navigator, Auditor, Corroborator). Requires a valid `GOOGLE_GENERATIVE_AI_API_KEY` from **[Google AI Studio](https://aistudio.google.com/app/apikey)**.
+
+## Database management
+
+Postcard uses **Drizzle ORM** with **SQLite** for local development.
+
+- **Sync Schema:** Use `npm run db:push` to apply schema changes from `src/db/schema.ts` to `local.db` without migrations.
+- **Inspect Data:** Use `npm run db:studio` to open the Drizzle Studio GUI for browsing cached analyses and forensic logs.
 
 ## Technical stack
 

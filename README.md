@@ -39,7 +39,7 @@ We built a 4-stage forensic pipeline focused on deep audit log generation and co
 
 ## Documentation
 
+- **[CONTRIBUTING.md](CONTRIBUTING.md):** Comprehensive **[Quick start](CONTRIBUTING.md#quick-start)** guide, technical stack, and architecture notes.
 - **[DESIGN.md](DESIGN.md):** Full technical specification and pipeline stages.
 - **[PROJECT_SUMMARY.md](PROJECT_SUMMARY.md):** High-level summary for the PantherHacks 2026 Devpost submission.
 - **[PITCH.md](PITCH.md):** Pitch script and video cues.
-- **[CONTRIBUTING.md](CONTRIBUTING.md):** Contributor notes, technical stack, and quick start guide.
