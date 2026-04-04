@@ -493,14 +493,16 @@ function ResultsPostcard({ postUrl }: { postUrl: string }) {
 /* ── Main AnalysisJourney ─────────────────────────── */
 
 type ApiProgress = {
+  stage: string;
+  message: string;
   progress: number;
 };
 
 export function AnalysisJourney({ postUrl }: { postUrl: string }) {
   const [stage, setStage] = useState<AnalysisStage>(0);
   const [showResults, setShowResults] = useState(false);
-  const [, setError] = useState<string | null>(null);
-  const [, setApiProgress] = useState<ApiProgress | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [apiProgress, setApiProgress] = useState<ApiProgress | null>(null);
 
   useEffect(() => {
     const fetchTrace = async () => {
@@ -532,20 +534,22 @@ export function AnalysisJourney({ postUrl }: { postUrl: string }) {
           for (const line of lines) {
             if (line.startsWith("data: ")) {
               try {
-                const data = JSON.parse(line.slice(6));
+                const jsonStr = line.slice(6);
+                if (!jsonStr.trim()) continue;
+                const data = JSON.parse(jsonStr);
 
-                if (data.event === "progress") {
-                  setApiProgress(data.data);
-                  const progress = data.data.progress;
+                if (data.stage) {
+                  setApiProgress(data);
+                  const progress = data.progress;
                   if (progress < 0.33) setStage(1);
                   else if (progress < 0.66) setStage(2);
                   else if (progress < 1) setStage(3);
                   else setStage(4);
-                } else if (data.event === "complete") {
+                } else if (data.trace) {
                   setStage(4);
                   setTimeout(() => setShowResults(true), 1200);
-                } else if (data.event === "error") {
-                  setError(data.data.error);
+                } else if (data.error) {
+                  setError(data.error);
                 }
               } catch {
                 // Skip malformed JSON
@@ -692,7 +696,9 @@ export function AnalysisJourney({ postUrl }: { postUrl: string }) {
                   color: "var(--postal-ink-muted)",
                 }}
               >
-                {stage === 0 ? "Dispatched" : STAGES[stage - 1]?.label}
+                {stage === 0
+                  ? "Dispatched"
+                  : (apiProgress?.stage ?? STAGES[stage - 1]?.label)}
               </p>
               <p
                 className="text-sm italic"
@@ -701,7 +707,9 @@ export function AnalysisJourney({ postUrl }: { postUrl: string }) {
                   color: "var(--postal-ink)",
                 }}
               >
-                {stage === 0 ? "Evidence en route…" : STAGES[stage - 1]?.detail}
+                {stage === 0
+                  ? "Evidence en route…"
+                  : (apiProgress?.message ?? STAGES[stage - 1]?.detail)}
               </p>
             </motion.div>
           )}

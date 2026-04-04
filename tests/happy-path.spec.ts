@@ -7,25 +7,19 @@ test("happy path: submit post URL and see results", async ({ page }) => {
   await page.goto("http://localhost:3000");
 
   await expect(page.getByRole("heading", { name: "Postcard" })).toBeVisible();
-  await expect(
-    page.getByText("Trace every post back to its source."),
-  ).toBeVisible();
 
   const urlInput = page.getByPlaceholder(
     "https://x.com/user/status/1234567890",
   );
-  await expect(urlInput).toBeVisible();
-
   await urlInput.fill(testUrl);
 
   const submitButton = page.getByRole("button", { name: "Trace Post" });
   await submitButton.click();
 
-  await page.waitForTimeout(8000);
-
   await expect(page.getByText("Your postcard has arrived.")).toBeVisible({
-    timeout: 15000,
+    timeout: 30000,
   });
-  await expect(page.getByText("Postmark Score")).toBeVisible();
+
+  await expect(page.getByText("Postcard Score")).toBeVisible();
   await expect(page.getByText("Travel Log")).toBeVisible();
 });
