@@ -32,7 +32,7 @@ test.describe("Interaction flows", () => {
     const submitButton = page.getByRole("button", { name: "Trace Post" });
     await submitButton.click();
 
-    await expect(page.getByText("Your postcard has arrived.")).toBeVisible({
+    await expect(page.getByText("Postcard Score")).toBeVisible({
       timeout: 30000,
     });
 
