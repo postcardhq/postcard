@@ -1,5 +1,5 @@
 import { google } from "@ai-sdk/google";
-import { generateText, tool } from "ai";
+import { streamText, stepCountIs } from "ai";
 import { z } from "zod";
 import type { Postmark } from "../vision/ocr";
 
@@ -26,7 +26,7 @@ const TRUSTED_DOMAINS = [
   "cbsnews.com",
 ] as const;
 
-const PlatformDorkPatterns: Record<string, string> = {
+const PlatformDorkPatterns: Record<string, (query: string) => string> = {
   X: (query: string) =>
     `site:x.com OR site:twitter.com "${query.slice(0, 100)}"`,
   YouTube: (query: string) => `site:youtube.com "${query.slice(0, 80)}"`,
@@ -90,24 +90,17 @@ export async function corroboratePostmark(
   const dorkFn =
     PlatformDorkPatterns[postmark.platform] ?? PlatformDorkPatterns.Other;
 
-  const searchQueries = [
-    dorkFn(mainText),
-    ...(postmark.username
-      ? [`site:${postmark.platform.toLowerCase()}.com "${postmark.username}"`]
-      : []),
-    ...(postmark.timestampText
-      ? [`"${postmark.timestampText}" ${mainText.slice(0, 50)}`]
-      : []),
-  ].slice(0, 3);
+  log(
+    `Starting search grounding for ${postmark.platform} post using ${dorkFn(mainText).slice(0, 30)}...`,
+  );
 
-  const { fullStream } = await generateText({
-    model: google("gemini-2.0-flash"),
+  const { fullStream } = await streamText({
+    model: google("gemini-1.5-flash"),
     tools: {
       google_search: google.tools.googleSearch({}),
     },
-    maxToolCalls: MAX_TOOL_CALLS,
-    system: `You are the "Corroboration Auditor" for Postcard, a digital forensics system.
-Your goal is to find primary sources that verify or refute the claims in a social media post.
+    stopWhen: stepCountIs(MAX_TOOL_CALLS),
+    system: `You are a forensic media analyst. Your mission is to find primary sources that verify or refute the claims in a social media post using Google Search.
 
 TRUSTED DOMAINS (use site: operator):
 ${TRUSTED_DOMAINS.map((d) => `  - ${d}`).join("\n")}
@@ -119,7 +112,7 @@ PLATFORM DORKING PATTERNS:
 - News: site:nytimes.com "specific statement"
 
 For each search, examine results from trusted domains first, then note other relevant sources.
-Return findings in the structured format with relevance classification.`,
+Return your final verdict in structured JSON format with relevance classification.`,
     messages: [
       {
         role: "user",
@@ -137,7 +130,6 @@ Search for corroborating or refuting sources. Focus on:
 1. News articles from trusted domains
 2. Official statements or press releases
 3. Public records or repository logs
-4. Other social media posts from the same source
 
 Use the google_search tool to execute your searches.`,
       },
@@ -146,42 +138,49 @@ Use the google_search tool to execute your searches.`,
 
   let toolCallCount = 0;
 
-  for await (const { type, toolCall, toolResult } of fullStream) {
-    if (type === "tool-call" && toolCall.functionName === "google_search") {
-      toolCallCount++;
-      const query = toolCall.args.query as string;
-      log(
-        `Executing search query ${toolCallCount}/${MAX_TOOL_CALLS}: ${query.slice(0, 80)}...`,
-      );
-
-      queriesExecuted.push({ query, sourcesFound: 0 });
+  for await (const part of fullStream) {
+    if (part.type === "tool-call") {
+      if (part.toolName === "google_search") {
+        toolCallCount++;
+        const input = part.input as { query: string };
+        const query = input.query;
+        log(
+          `Executing search query ${toolCallCount}/${MAX_TOOL_CALLS}: ${query.slice(0, 80)}...`,
+        );
+        queriesExecuted.push({ query, sourcesFound: 0 });
+      }
     }
 
-    if (type === "tool-result" && toolResult.functionName === "google_search") {
-      const result = toolResult.result as {
-        results?: Array<{ title?: string; url?: string; snippet?: string }>;
-      };
-      const sources = result?.results ?? [];
-      log(`Found ${sources.length} results`);
+    if (part.type === "tool-result") {
+      if (part.toolName === "google_search") {
+        const output = part.output as {
+          results?: Array<{ title?: string; url?: string; snippet?: string }>;
+        };
+        const sources = output?.results ?? [];
+        log(`Found ${sources.length} results`);
 
-      for (const source of sources.slice(0, 3)) {
-        if (primarySources.length >= MAX_SOURCES) break;
+        for (const source of sources.slice(0, 3)) {
+          if (primarySources.length >= MAX_SOURCES) break;
 
-        const domain = new URL(
-          source.url ?? "https://example.com",
-        ).hostname.replace("www.", "");
-        const isTrusted = TRUSTED_DOMAINS.some((d) => domain.includes(d));
+          const domain = new URL(
+            source.url ?? "https://example.com",
+          ).hostname.replace("www.", "");
+          const isTrusted = TRUSTED_DOMAINS.some((d) => domain.includes(d));
 
-        primarySources.push({
-          url: source.url ?? "https://example.com",
-          title: source.title ?? "Untitled",
-          source: domain,
-          snippet: source.snippet ?? "",
-          relevance: isTrusted ? "supporting" : "neutral",
-        });
+          primarySources.push({
+            url: source.url ?? "https://example.com",
+            title: source.title ?? "Untitled",
+            source: domain,
+            snippet: source.snippet ?? "",
+            relevance: isTrusted ? "supporting" : "neutral",
+          });
+        }
+
+        if (queriesExecuted.length > 0) {
+          queriesExecuted[queriesExecuted.length - 1].sourcesFound =
+            sources.length;
+        }
       }
-
-      queriesExecuted[queriesExecuted.length - 1].sourcesFound = sources.length;
     }
   }
 

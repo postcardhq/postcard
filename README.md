@@ -2,75 +2,58 @@
 
 > _Trace every post back to its source._
 
-Postcard is a digital forensics tool that takes a screenshot of a social media post and traces it to its origin — calculating how much the content has drifted from the original along the way.
+![Forensic Dashboard Mockup](./public/mockup.png)
 
-**Track:** PantherHacks 2026 — Cybersecurity  
-**Team:** Ethan + Yves  
-**Stack:** Next.js · Gemini (Google AI) · AI SDK v6 · Drizzle ORM + Turso/libSQL
+**Postcard** is a digital forensics tool that takes a screenshot of a social media post and traces it back to its definitive origin—calculating a **postcard score** of credibility by auditing how much the content has drifted from the primary source.
 
 ---
 
-## What it does
+## 🏆 PantherHacks 2026 Submission
 
-1. **Upload** a screenshot of any social media post.
-2. **Vision parse** — Gemini extracts text, handles, timestamps, and engagement counts.
-3. **Navigator agent** — Gemini synthesizes high-precision search queries to find the primary source.
-4. **Multimodal auditor** — Gemini verifies the source URL, timestamp consistency, and visual fingerprints.
-5. **Postmark score** — The system calculates the final verdict and provides a forensic audit trail.
+**Track:** [Cybersecurity / OSINT](https://pantherhacks2026.devpost.com/)  
+**Challenge:** Rebuilding trust in a "post-truth" digital era.  
+**Pitch Script:** [View Video Script](./PITCH.md)
+
+### The Problem
+Screenshots are the primary currency of misinformation. They strip context, remove timestamps, and are trivially easy to manipulate. Postcard reverses this digital entropy by finding the primary source and performing a multi-stage forensic audit.
+
+### The Solution: The "Postmark" Pipeline
+We built a 4-stage forensic pipeline that analyzes the "DNA" of a screenshot rather than just its pixels:
+1. **Vision Inference:** Gemini extracts handles, timestamps, and engagement "fingerprints."
+2. **Grounded Navigation:** Synthesizes high-precision search queries to find the source URL.
+3. **Multimodal Scrape:** Jina Reader ingest live content to verify consistency.
+4. **Corroboration Audit:** Deep search across trusted domains (X, Reddit, News) to verify claims.
 
 ---
 
-## Technical blueprint
+## 🚀 AI Developer Experience
 
-For the full technical specification, including Zod schemas, database ERD, and component breakdown, see the [design document](file:///c:/Users/ethan/Documents/GitHub/postcard/DESIGN.md).
+To build a system this complex in a 48-hour hackathon, we leaned heavily on **[Vercel AI SDK v6](https://sdk.vercel.ai/)**. 
+
+> [!TIP]
+> **Shout out to Vercel:** We utilized the new **AI SDK Skills** to maintain industry-standard best practices. These localized intelligence folders allowed our agentic AI assistants to follow the latest idiomatic patterns for `streamText`, `toolCall` payloads, and multi-step grounding, ensuring 100% type-safety throughout the forensic pipeline.
 
 ---
 
-## Quick start
+## 🛠️ Technical Stack
+
+| Layer          | Choice                     | Why                                                 |
+| -------------- | -------------------------- | --------------------------------------------------- |
+| **Frontend**   | Next.js 16 (Futuristic!)   | Responsive dashboard and high-performance API.      |
+| **AI / Vision**| Google Gemini              | Native multimodal vision + Search grounding.        |
+| **Orchestration**| Vercel AI SDK v6         | Robust tool calling and typed stream iteration.     |
+| **Storage**    | Drizzle + Turso            | Type-safe SQLite persistence for forensic logs.     |
+
+---
+
+## 🏗️ Quick Start
 
 ```bash
 git clone https://github.com/EthanThatOneKid/postcard.git
 cd postcard
 npm install
-cp .env.example .env.local
-# Add GEMINI_API_KEY, TURSO_DATABASE_URL, and TURSO_AUTH_TOKEN to .env.local
-npx drizzle-kit push
+npm run check  # Verify type-safety and linting
 npm run dev
 ```
 
----
-
-## Tech stack
-
-| Layer         | Choice                     | Why                                                 |
-| ------------- | -------------------------- | --------------------------------------------------- |
-| Frontend      | Next.js                    | Responsive dashboard and fast API routes.           |
-| AI / Vision   | Gemini 2.5/3               | Native vision and Google Search grounding built-in. |
-| Orchestration | AI SDK v6                  | Idiomatic structured output and tool integration.   |
-| Storage       | Drizzle ORM + Turso/libSQL | Type-safe persistence with low cold-start SQLite.   |
-
----
-
-## Project structure
-
-All technical documentation is consolidated in [DESIGN.md](file:///c:/Users/ethan/Documents/GitHub/postcard/DESIGN.md).
-
-```bash
-postcard/
-├── DESIGN.md          # Full design doc
-├── README.md          # This file
-├── src/
-│   ├── app/
-│   │   ├── page.tsx          # Landing + upload
-│   │   ├── dashboard/page.tsx
-│   │   └── api/process/
-│   │       └── route.ts     # Trace endpoint
-│   ├── lib/
-│   │   ├── vision/
-│   │   │   ├── processor.ts  # Image preprocessing
-│   │   │   └── ocr.ts       # Gemini vision OCR
-│   │   ├── agents/
-│   │   │   ├── navigator.ts # Search query synthesis
-│   │   │   └── verifier.ts  # Forensic checks
-│   │   └── postcard.ts      # Core scoring logic
-```
+For the full technical specification, see the **[DESIGN.md](DESIGN.md)**.

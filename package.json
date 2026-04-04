@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "eslint src app components",
+    "type-check": "tsc --noEmit",
+    "check": "npm run lint && npm run type-check",
     "format": "prettier --write ."
   },
   "dependencies": {

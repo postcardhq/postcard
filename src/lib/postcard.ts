@@ -153,6 +153,99 @@ const MOCK_REPORT: PostcardReport = {
   timestamp: new Date().toISOString(),
 };
 
+export type ProgressCallback = (
+  stage: string,
+  message: string,
+  progress: number,
+) => void;
+
+export const TraceReportSchema = z.object({
+  url: z.string().url(),
+  markdown: z.string(),
+  platform: z.string(),
+  corroboration: CorroborationSchema,
+  postmarkScore: z.number().min(0).max(1),
+  timestamp: z.string().datetime(),
+});
+
+export type TraceReport = z.infer<typeof TraceReportSchema>;
+
+export async function processTrace(
+  url: string,
+  userApiKey?: string,
+  onProgress?: ProgressCallback,
+): Promise<TraceReport> {
+  const progress = (stage: string, message: string, p: number) => {
+    onProgress?.(stage, message, p);
+  };
+
+  if (process.env.NEXT_PUBLIC_MOCK_PIPELINE === "true") {
+    progress("complete", "Mock trace complete", 1);
+    return {
+      url: "https://x.com/example/status/123",
+      markdown: MOCK_REPORT.ocr.markdown,
+      platform: "X",
+      corroboration: MOCK_REPORT.corroboration,
+      postmarkScore: 0.85,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  progress("scraping", "Fetching content via Jina Reader...", 0.1);
+  const jinaResponse = await fetch(
+    `https://r.jina.ai/${encodeURIComponent(url)}`,
+  );
+  if (!jinaResponse.ok) {
+    throw new Error(`Jina Reader failed: ${jinaResponse.status}`);
+  }
+  const markdown = await jinaResponse.text();
+  progress("scraped", `Fetched ${markdown.length} characters`, 0.3);
+
+  const platform = inferPlatform(url);
+  progress("corroborating", "Searching for primary sources...", 0.4);
+
+  const postmark: import("./vision/ocr").Postmark = {
+    platform: platform as "X" | "YouTube" | "Reddit" | "Instagram" | "Other",
+    username: undefined,
+    timestampText: undefined,
+    mainText: markdown.slice(0, 500),
+  };
+
+  const corroboration = await corroboratePostmark(postmark, markdown, (msg) => {
+    progress("corroborating", msg, 0.5);
+  });
+
+  progress("scoring", "Calculating Postmark score...", 0.9);
+
+  const postmarkScore =
+    0.7 * corroboration.confidenceScore +
+    (0.3 *
+      corroboration.primarySources.filter((s) => s.relevance === "supporting")
+        .length) /
+      Math.max(corroboration.primarySources.length, 1);
+
+  progress("complete", "Trace complete", 1);
+
+  return TraceReportSchema.parse({
+    url,
+    markdown,
+    platform,
+    corroboration,
+    postmarkScore,
+    timestamp: new Date().toISOString(),
+  });
+}
+
+function inferPlatform(url: string): string {
+  const hostname = new URL(url).hostname.toLowerCase();
+  if (hostname.includes("x.com") || hostname.includes("twitter.com"))
+    return "X";
+  if (hostname.includes("youtube.com")) return "YouTube";
+  if (hostname.includes("reddit.com")) return "Reddit";
+  if (hostname.includes("instagram.com")) return "Instagram";
+  return "Other";
+}
+
 export async function processPostcard(
   imageBuffer: Buffer,
   mimeType: string = "image/png",

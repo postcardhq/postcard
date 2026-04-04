@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, DragEvent, ChangeEvent } from "react";
+import { useState, useCallback, useEffect, useRef, DragEvent, ChangeEvent } from "react";
 import { motion, AnimatePresence } from "motion/react";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
@@ -76,7 +76,7 @@ function AirmailAnimation({
   const [stage, setStage] = useState<AnimStage>("envelope");
 
   // Progress through stages automatically
-  useState(() => {
+  useEffect(() => {
     const t1 = setTimeout(() => setStage("folding"), 1800);
     const t2 = setTimeout(() => setStage("airplane"), 2800);
     const t3 = setTimeout(() => setStage("flying"), 3600);
@@ -85,7 +85,7 @@ function AirmailAnimation({
       clearTimeout(t2);
       clearTimeout(t3);
     };
-  });
+  }, []);
 
   return (
     <div
@@ -339,8 +339,9 @@ export function DropZone({
     }
     setError(null);
     try {
-      const bytes = await file.bytes();
-      const base64 = bytes.toBase64();
+      const arrayBuffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(arrayBuffer);
+      const base64 = btoa(Array.from(bytes).map(byte => String.fromCharCode(byte)).join(""));
       setImageUrl(`data:${file.type};base64,${base64}`);
       setAnimating(true);
     } catch (err) {
