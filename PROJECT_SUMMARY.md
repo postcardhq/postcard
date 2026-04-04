@@ -1,46 +1,40 @@
-# Postcard — Project Summary
+# Postcard project summary
 
 > **Team:** Ethan (lead) + Yves  
 > **Event:** PantherHacks 2026 (April 3–5, 2026)  
 > **Track:** Cybersecurity  
 > **Repository:** `postcard`
 
----
-
-## What It Does
+## What it does
 
 **Postcard** is a digital forensics tool that takes a social media post URL, traces it back to its original source, and produces a **Postcard Score (0–100%)** measuring how much the content has drifted from the primary truth.
 
 Tagline: _Trace every post back to its source._
 
----
-
-## The Problem
+## The problem
 
 Screenshots strip all context. By the time something goes viral it's been cropped, captioned, and misattributed. A screenshot of a tweet looks nothing like the original tweet. A screenshot of a news article removes the byline, date, and corrections footer. Postcard reverses that entropy by performing a multi-stage forensic audit of the primary source.
 
----
-
-## How It Works
+## How it works
 
 **User flow:** Enter Post URL → Forensic Pipeline Runs → Postcard Score + Subscore Breakdown appears.
 
-### Stage 1: Preprocessor
+### Stage 1: preprocessor
 
 Image enhancement via `sharp` — contrast normalization, brightness adjustment, sharpening. Prepares any forensic evidence (screenshots) for reliable OCR.
 
-### Stage 2: OCR + Postcard Extraction
+### Stage 2: OCR and postcard extraction
 
 AI SDK v6 `generateText` with `Output.object({ schema })` against **Gemini 2.0 Flash**. Multimodal input. Extracts:
 
 - Raw text (markdown)
 - Forensic metadata: username handle, timestamp, platform, engagement counts, UI anchors
 
-### Stage 3: Navigator Agent
+### Stage 3: navigator agent
 
 AI SDK v6 `generateText` with `google.tools.googleSearch({})` against **Gemini 2.5 Flash**. Takes the extracted metadata and triangulates the exact source URL via targeted Google searches.
 
-### Stage 4: Forensic Auditor
+### Stage 4: forensic auditor
 
 Playwright scrapes the live URL. Computes four forensic subscores:
 
@@ -49,9 +43,7 @@ Playwright scrapes the live URL. Computes four forensic subscores:
 - **Bias Score (25%)** — Has the semantic meaning shifted or been distorted?
 - **Temporal Score (20%)** — Do timestamps and engagement rates align with the live page?
 
----
-
-## Postcard Score
+## Postcard score
 
 The overall score is a weighted percentage:
 
@@ -71,7 +63,7 @@ Postcard (%) = (
 ) × 100
 ```
 
-### Bias Score (LLM Judge)
+### Bias score (LLM judge)
 
 The LLM acts as a forensic media analyst, comparing the screenshot or URL text against the fetched source. It assesses:
 
@@ -79,8 +71,6 @@ The LLM acts as a forensic media analyst, comparing the screenshot or URL text a
 2. Attribution drift — was the author credited correctly?
 3. Framing shifts — was the editorial angle changed?
 4. Context removal — was surrounding context stripped?
-
----
 
 ## Architecture
 
@@ -107,9 +97,7 @@ Post URL / Image
 PostcardReport
 ```
 
----
-
-## Tech Stack
+## Tech stack
 
 | Layer      | Choice                                               |
 | ---------- | ---------------------------------------------------- |
@@ -121,9 +109,7 @@ PostcardReport
 | Database   | SQLite (libSQL for Turso)                            |
 | Automation | Playwright + sharp                                   |
 
----
-
-## Key Decisions
+## Key decisions
 
 - **Postcard Noun:** Unified all terminology to "Postcard" (the tool) and "Postcard Score" (the result).
 - **JSON SSE:** Used JSON body for `POST /api/postcards` to simplify the OpenAPI spec.
