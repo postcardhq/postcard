@@ -3,6 +3,7 @@ import { test, expect } from "@playwright/test";
 test("happy path: submit post URL and see results", async ({ page }) => {
   const testUrl =
     "https://www.instagram.com/p/DV9hesME3ka/?utm_source=ig_web_copy_link&igsh=NTc4MTIwNjQ2YQ==";
+  // Test case: "kidnapped by dolphins in florida man" - Instagram post that Jina Reader cannot fetch
 
   await page.goto("http://localhost:3000");
 
