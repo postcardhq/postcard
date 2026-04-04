@@ -1,277 +1,193 @@
-# Postcard — Design Document
+# Postcard design document
 
-> **Team:** Ethan (lead) + Yves  
+> **Team:** [Ethan](https://github.com/EthanThatOneKid), [Yves](https://github.com/hallowsyves)  
 > **Event:** PantherHacks 2026 (April 3–5, 2026)  
-> **Track:** Cybersecurity  
-> **Repository:** `postcard`  
-> **Stack:** Web app — server-side pipeline (see Section 14)
+> **Track:** Cybersecurity
+> **Stack:** Next.js, TypeScript, Tailwind, Google Gemini, Vercel AI SDK v6, Drizzle ORM, Turso/libSQL, Jina Reader
 
 ---
 
-## TL;DR — What We're Building
+## Project vision
 
-A web app that takes a screenshot of a social media post, finds the original post URL, and scores how credible it is based on:
-- **Origin** — Can we locate the original post?
-- **Corroboration** — Do independent sources agree?
-- **Bias** — Is the screenshot's framing different from the source?
-- **Temporal** — Does the timestamp check out?
+Postcard reverses the entropy of social media screenshots by tracing them back to their source. When users upload a screenshot, Postcard locates the original post, fetches its live metadata, and calculates a **Postmark score** to reveal how much the content has drifted from the truth.
 
-The output is a **Postmark Score (0–100%)** with subscore breakdown available via progressive disclosure.
+### Core problem
+Screenshots strip context. Cropped text, missing timestamps, and altered engagement counts make it easy to spread misinformation. Postcard restores that context by finding the primary source and auditing it for forensic consistency.
 
----
-
-## 1. Concept & Vision
-
-**Tagline:** *Trace every post back to its source.*
-
-**Core problem:** Screenshots strip all context. By the time something goes viral it's been cropped, captioned, and misattributed. Postcard reverses that entropy by finding the original post URL and scoring how trustworthy the screenshot is.
-
-**Workflow:** User uploads screenshot → Postcard locates the original post → fetches full metadata → compares against screenshot → outputs Postmark Score + subscore breakdown.
-
-**Out of scope for now:**
-- Tracing chains of "who got info from where" (too hard — hard to prove attribution)
-- Wayback Machine historical lookups (future work)
-- Degrees of separation metaphor (misleading — we trace events directly, not chains)
+### Out of scope
+- Tracing multi-step attribution chains.
+- Wayback Machine historical lookups (deferred for MVP).
+- Mobile application (web-first for hackathon).
 
 ---
 
-## 2. Hackathon Constraints
+## Technical architecture
 
-- **Timebox:** ~48 hours (April 3–5)
-- **Team size:** 2–4 people
-- **Goal:** Functional end-to-end demo judges can interact with
-- **Scope:** Web app only. No mobile (Swift/Expo).
-- **Strategy:** Ship the core flow — upload → locate post → score — even if the underlying model calls are simple. Polish the score reveal and progressive disclosure.
+Postcard operates as a sequential pipeline using **AI SDK v6** for structured forensic extraction and grounding.
 
----
+### Pipeline stages
 
-## 3. The Postcard Pipeline
+#### Image preprocessor
+The preprocessor uses **Sharp** to normalize contrast, adjust brightness, and sharpen the image. This optimization ensures high-quality OCR results in the next stage.
 
-### Step 1: Post Locator (Gemini 3+ Multimodal)
+#### OCR and platform inference
+Gemini 2.5/3+ analyzes the processed image to extract structured metadata and **infer the social media platform** (X, YouTube, Reddit, Instagram, or 'Other'). This inference is critical for direct search dorking.
 
-The first and most critical step. Given a screenshot, Gemini 3+ extracts the **original post URL** directly from the social platform.
+```typescript
+import { z } from 'zod';
 
-This is crucial because:
-- Screenshot text may be cropped (full description not visible)
-- Metadata (likes, shares, exact timestamp) may not appear in screenshot
-- We want the full, unmodified source to compare against
+export const PostmarkSchema = z.object({
+  username: z.string().optional().describe('Found handles like @username'),
+  timestampText: z.string().optional().describe('Relative or absolute timestamp (e.g. "2h ago")'),
+  platform: z.enum(['X', 'YouTube', 'Reddit', 'Instagram', 'Other']).default('Other'),
+  engagement: z.object({
+    likes: z.string().optional(),
+    retweets: z.string().optional(),
+    views: z.string().optional(),
+  }).optional(),
+  mainText: z.string().describe('The primary text content of the post'),
+});
+```
 
-**Input:** Screenshot image  
-**Output:** Original post URL (or null if not found)
+#### Post resolution and Jina scrape
+The navigator agent uses the inferred platform and OCR metadata to locate the **specific source URL** of the post.
 
-### Step 2: URL Verification
+**Jina Reader integration:** Once the agent resolves the unique post URL (e.g., `https://twitter.com/user/status/123`), it uses the **Jina Reader API** (`https://r.jina.ai/<url>`) to scrape the **live metadata** (exact like counts, character-by-character text, absolute timestamps). This serves as our "ground truth" for the post itself.
 
-If a URL is found, fetch it directly to extract:
-- Full post text (compare against screenshot)
-- Exact timestamp
-- Author/handle
-- Engagement counts
-- Any edit history
+#### Primary source corroboration (Google Dorking)
+Using an allowlist of trusted domains, the auditor performs **Google Dorking** to identify primary sources (news articles, official statements, repository logs) that verify or refute the post's content.
 
-### Step 3: Corroboration Search (if URL not found or supplementary)
+| Platform | Operator Example | Purpose |
+| :--- | :--- | :--- |
+| **X (Twitter)** | `site:twitter.com intext:"exact phrase"` | Find specific posts by content. |
+| **YouTube** | `site:youtube.com "video title"` | Locate specific video descriptions. |
+| **Reddit** | `site:reddit.com/r/subreddit "thread title"` | Narrow to specific communities. |
+| **News** | `site:nytimes.com "statement context"` | Find corroborating primary sources. |
 
-If the post cannot be located via direct URL, fall back to Google/Gemini web search:
-- Generate targeted search queries from screenshot content
-- Find independent sources reporting the same claim/event
-- Score corroboration based on number of independent vetted sources
-
-### Step 4: Bias Assessment (LLM Judge)
-
-LLM acts as a judge, comparing screenshot against the fetched source (or search results if no URL):
-- Caption changes?
-- Attribution drift?
-- Framing shifts?
-- Context removed?
-
-Outputs a **Bias Subscore (0–100)**.
-
-### Step 5: Postmark Score (Overall)
-
-Combine all subscores into a weighted **Postmark Score (0–100%)**.
+The final **Postmark score** is calculated by comparing the screenshot, the Jina-scraped post metadata, and the dorked primary sources.
 
 ---
 
-## 4. Postmark Score — Components & Weights
+## Database schema
 
-### Score Constants (easily adjustable)
+Postcard uses **Drizzle ORM** with **Turso/libSQL** for type-safe server-side caching and forensic log storage. This ensuring high performance with zero cold-start penalties in serverless environments.
 
+### Entity relationship diagram
+
+```mermaid
+erDiagram
+    analyses {
+        text id PK
+        text status
+        integer hits
+        text created_at
+        text deleted_at
+    }
+    screenshots {
+        text id PK
+        text analysis_id FK
+        text sha256 "unique"
+        blob data
+    }
+    posts {
+        text id PK
+        text analysis_id FK
+        text url "unique"
+        text platform
+        text post_text
+        text metadata
+    }
+    judgments {
+        text id PK
+        text analysis_id FK
+        text subscore_type
+        real score
+        text reasoning
+    }
+
+    analyses ||--o{ screenshots : "contains"
+    analyses ||--o{ posts : "resolves to"
+    analyses ||--o{ judgments : "receives"
+```
+
+### Drizzle schema definition
+
+We use **Drizzle-Zod** to automatically generate schema validation from our database tables.
+
+```typescript
+import { sqliteTable, text, real, blob, integer } from 'drizzle-orm/sqlite-core';
+
+export const analyses = sqliteTable('analyses', {
+  id: text('id').primaryKey(),
+  status: text('status').notNull(),
+  hits: integer('hits').default(1).notNull(),
+  createdAt: text('created_at').$defaultFn(() => new Date().toISOString()),
+  deletedAt: text('deleted_at'),
+});
+
+export const screenshots = sqliteTable('screenshots', {
+  id: text('id').primaryKey(),
+  analysisId: text('analysis_id').references(() => analyses.id),
+  sha256: text('sha256').unique().notNull(),
+  data: blob('data').notNull(),
+});
+
+export const posts = sqliteTable('posts', {
+  id: text('id').primaryKey(),
+  analysisId: text('analysis_id').references(() => analyses.id),
+  url: text('url').unique().notNull(), // Unique URL for caching
+  platform: text('platform'),
+  postText: text('post_text'),
+  metadata: text('metadata'), // JSON Jina scrape results
+});
+```
+
+---
+
+## Caching strategy
+
+Postcard caches forensic results at the **Resolved Post URL** level. 
+
+### Audit flow
+- **OCR Step:** Extract text and infer platform from the screenshot.
+- **Resolution Step:** Locate the unique Post URL using Google Dorking.
+- **Cache Check:** Query the `posts` table for the resolved URL.
+    - **Cache Hit:** Increment the `hits` count on the associated `analysis`. Serve cached forensic data and Postmark score.
+    - **Cache Miss:** Scrape via Jina Reader, perform full corroboration, and persist a new forensic record.
+
+This strategy ensures that multiple screenshots of the same post (different crops, qualities) share the same forensic audit trail while tracking the post's forensic "popularity."
+
+---
+
+## Postmark score logic
+
+The system combines subscores into a weighted percentage (0–100%).
+
+### Weighted formula
 ```javascript
+// Score weights are arbitrary for the hackathon and easily adjustable.
 const WEIGHTS = {
-  ORIGIN:         0.30,  // Can we locate the original post?
-  CORROBORATION:  0.25,  // Do independent sources corroborate?
-  BIAS:           0.25,  // Is the screenshot faithful to the source?
-  TEMPORAL:       0.20,  // Does the timestamp check out?
+  ORIGIN:   0.40, // URL reachability
+  TEMPORAL: 0.30, // Timestamp consistency
+  VISUAL:   0.30, // UI fingerprint alignment
 };
+
+const TotalScore = (O * WEIGHTS.ORIGIN) + (T * WEIGHTS.TEMPORAL) + (V * WEIGHTS.VISUAL);
 ```
 
-> **Future work:** Optimize weights via user feedback or labeled dataset. For now, educated guesses illustrate the concept. Weights are arbitrary but dynamic — change the constants to rebalance.
-
-### Subscores
-
-| Subscore | Range | Method |
-|----------|-------|--------|
-| **Origin** | 0 or 1 | Binary: URL found (1) or not found (0) |
-| **Corroboration** | 0.0–1.0 | LLM counts independent vetted sources, scales 1→n |
-| **Bias** | 0.0–1.0 | LLM judge: semantic similarity (1 = identical, 0 = completely different) |
-| **Temporal** | 0.0–1.0 | Timestamp match or reasonable proximity |
-
-### Overall Postmark Score
-
-```
-Postmark (%) = (
-  WEIGHTS.ORIGIN        × Origin
-  + WEIGHTS.CORROBORATION × Corroboration
-  + WEIGHTS.BIAS          × Bias
-  + WEIGHTS.TEMPORAL      × Temporal
-) × 100
-```
-
-### UI: Progressive Disclosure
-
-- **Top level:** Postmark Score as a single percentage (e.g., "73%")
-- **Expandable:** Subscore breakdown (Origin: ✓, Corroboration: 2/3 sources, Bias: minor framing shift, Temporal: 3hrs off)
-- **Further:** Full LLM narrative explanation
+### Subscore definitions
+- **Origin (O):** Binary check. Is the source URL reachable and platform-consistent?
+- **Temporal (T):** Proximity check. Does the screenshot timestamp match the metadata found online?
+- **Visual (V):** UI audit. Do buttons, logos, and layout match the expected platform's "fingerprint"?
 
 ---
 
-## 5. Vetted Source Allowlist (TLD-Permissive)
+## User interface
 
-A source is "vetted" if it belongs to a recognized institutional or journalistic TLD:
-
-| Category | TLDs |
-|----------|------|
-| Government | `.gov`, `.mil` |
-| Academic | `.edu`, `.ac.uk`, `.ac.*` (international) |
-| NGOs / Nonprofits | `.org` |
-| News / Journalism | See below |
-
-**News domains (initial allowlist):**
-```
-reuters.com, apnews.com, ap.co, nytimes.com, washingtonpost.com,
-wsj.com, theguardian.com, bbc.com, bbc.co.uk, cnn.com, foxnews.com,
-nbcnews.com, abcnews.com, abc.net.au, cbsnews.com, pbs.org,
-npr.org, usatoday.com, latimes.com, politico.com, axios.com,
-huffpost.com, theatlantic.com, wired.com, arstechnica.com,
-techcrunch.com, theverge.com, independent.co.uk, dailymail.co.uk,
-mirror.co.uk, express.co.uk, sky.com, newsweek.com, time.com,
-forbes.com, bloomberg.com, reutersagency.com
-```
-
-**TLD-permissive logic:** Any domain ending in `.gov`, `.mil`, `.edu`, `.ac.*`, or `.org` is automatically vetted. No need to enumerate every subdomain.
+- **Minimalist dark mode:** Postcard uses a sleek black background with vibrant accent colors for scores.
+- **Drag-and-drop:** Users upload screenshots via a central landing zone.
+- **Real-time audit log:** The dashboard displays live updates (e.g., "Synthesizing queries...", "Auditing source...") to keep users engaged.
+- **Progressive disclosure:** The interface shows the high-level score first, then allows users to expand for a detailed subscore breakdown and LLM reasoning.
 
 ---
 
-## 6. Bias Score — LLM as Judge
-
-**Method:** LLM compares screenshot text against fetched source (or corroboration results).
-
-**Prompt (simplified):**
-```
-You are a forensic media analyst. Compare the original text (A) against the screenshot text (B).
-
-Assess:
-1. Caption changes — what text was added, removed, or altered?
-2. Attribution drift — was the author credited correctly?
-3. Framing shifts — was the editorial angle changed?
-4. Context removal — was surrounding context stripped?
-
-Output a score 0–100 where 100 = identical framing, 0 = completely distorted.
-Also output a short narrative explanation of what changed.
-```
-
-**Important:** Due to the probabilistic nature of LLMs, repeated runs will NOT produce identical scores but will be **consistent within an acceptable range**. This is expected.
-
----
-
-## 7. Caching (SQLite)
-
-**Cache key:** MD5 hash of uploaded image bytes  
-**Cache value:** Full analysis result (Postmark Score, all subscores, URL found, narrative)
-
-**Flow:**
-1. User uploads image
-2. Compute MD5 hash
-3. Check SQLite for existing result → instant response if hit
-4. If miss → run pipeline → store result → return
-
----
-
-## 8. UI / UX
-
-- **Mobile-first responsive** — follows best practices, no bloat
-- **Dark mode** — `prefers-color-scheme` media query (no toggle needed)
-- **Minimal** — Black/dark background
-- **Core interaction:**
-  1. Drag-and-drop or tap to upload
-  2. Submit → loading state
-  3. Result: Postmark Score (%) + expand for subscore breakdown
-
----
-
-## 9. Navigator Agent — System Prompt
-
-```
-You are the Postcard Navigator Agent. Given OCR output from a social media screenshot, find the original source URL.
-
-INPUT:
-- Extracted text (caption, comment, post body)
-- Platform clues (Instagram UI, X/Twitter blue check, YouTube thumbnail style, Reddit upvote icon, etc.)
-- Any @handles, timestamps, engagement counts
-
-TASK:
-1. Identify the most search-dense phrase (the "hook")
-2. Combine with platform context to generate 2–3 targeted queries
-3. Prioritize exact-match searches with quotes and site: operators
-4. Return candidate source URLs ranked by confidence
-
-OUTPUT:
-{
-  "candidates": [
-    { "url": "...", "query": "...", "confidence": 0.9 }
-  ]
-}
-
-CONSTRAINTS:
-- Maximum 3 search queries
-- Prefer primary sources over aggregators
-- Bias toward recent content (last 90 days) unless OCR shows older timestamp
-```
-
----
-
-## 10. Feature Priority
-
-### Must Ship (MVP)
-- [ ] Image upload form (drag-and-drop)
-- [ ] Step 1: Post Locator (Gemini 3+ multimodal → post URL)
-- [ ] Step 2: URL fetch + metadata extraction
-- [ ] Step 3: Corroboration search (Gemini Google Search tool)
-- [ ] Step 4: Bias assessment (LLM judge)
-- [ ] Step 5: Postmark Score + progressive disclosure
-- [ ] SQLite caching
-- [ ] Deployed live URL (Vercel)
-
-### Future Work
-- [ ] Wayback Machine historical lookup
-- [ ] Weight optimization (labeled dataset or user feedback)
-- [ ] Mobile app (Swift/Expo)
-- [ ] Opinion vs. factual disambiguation
-
----
-
-## 11. Tech Stack
-
-| Layer | Choice | Reason |
-|-------|--------|--------|
-| Frontend | Next.js or vanilla HTML/JS + Tailwind | Speed to MVP |
-| Vision / URL extraction | Gemini 3+ (multimodal image input) | Native multimodal; finds post URL directly |
-| Search | Gemini `googleSearch` tool | Built into Gemini; no extra API keys |
-| Bias scoring | Gemini (LLM judge) | Prompt-based; no extra model needed |
-| Persistence | SQLite | Server-side caching and storage |
-| Hosting | Vercel (free SSR) | Fastest path to live URL |
-
-**Key API:** `generativeLanguage.googleapis.com` — configure in [Settings > Advanced](/?t=settings&s=advanced) as `GEMINI_API_KEY`.
-
----
-
-*Last updated: 2026-04-03 21:05 UTC*
