@@ -207,8 +207,14 @@ function Mailbox({
 }
 
 /* ── Results Postcard ─────────────────────────────── */
-function ResultsPostcard({ postUrl }: { postUrl: string }) {
-  const score = 72;
+function ResultsPostcard({
+  postUrl,
+  traceData,
+}: {
+  postUrl: string;
+  traceData: TraceData | null;
+}) {
+  const score = traceData?.postcardScore ?? 0.72;
   const status =
     score >= 90
       ? "✓ Verified Origin"
@@ -221,6 +227,9 @@ function ResultsPostcard({ postUrl }: { postUrl: string }) {
       : score >= 50
         ? "var(--postal-amber)"
         : "var(--postal-red)";
+  const verdict = traceData?.corroboration?.verdict ?? "inconclusive";
+  const summary =
+    traceData?.corroboration?.summary ?? "No corroboration data available.";
 
   return (
     <motion.div
@@ -400,6 +409,15 @@ function ResultsPostcard({ postUrl }: { postUrl: string }) {
             >
               {status}
             </p>
+            <p
+              className="text-xs mt-2 italic"
+              style={{
+                fontFamily: "var(--font-serif)",
+                color: "var(--postal-ink-muted)",
+              }}
+            >
+              {summary}
+            </p>
           </div>
 
           {/* Divider */}
@@ -423,17 +441,19 @@ function ResultsPostcard({ postUrl }: { postUrl: string }) {
               {
                 hop: "01",
                 label: "Source",
-                value: "x.com/@originaluser — Apr 1, 2026",
+                value: traceData?.url ?? postUrl,
               },
               {
                 hop: "02",
                 label: "Platform",
-                value: "X / Twitter (verified handle)",
+                value: traceData?.platform ?? "Unknown",
               },
               {
                 hop: "03",
-                label: "Drift",
-                value: "Caption altered — moderate divergence",
+                label: "Verdict",
+                value:
+                  verdict.charAt(0).toUpperCase() +
+                  verdict.slice(1).replace("_", " "),
               },
             ].map(({ hop, label, value }) => (
               <div key={hop} className="flex gap-2 mb-1.5">
@@ -498,11 +518,33 @@ type ApiProgress = {
   progress: number;
 };
 
+type TraceData = {
+  url: string;
+  markdown: string;
+  platform: string;
+  postcardScore: number;
+  timestamp: string;
+  corroboration: {
+    primarySources: Array<{
+      url: string;
+      title: string;
+      source: string;
+      snippet: string;
+      relevance: string;
+      publishedDate?: string;
+    }>;
+    verdict: string;
+    summary: string;
+    confidenceScore: number;
+  };
+};
+
 export function AnalysisJourney({ postUrl }: { postUrl: string }) {
   const [stage, setStage] = useState<AnalysisStage>(0);
   const [showResults, setShowResults] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [apiProgress, setApiProgress] = useState<ApiProgress | null>(null);
+  const [traceData, setTraceData] = useState<TraceData | null>(null);
 
   useEffect(() => {
     const fetchTrace = async () => {
@@ -546,6 +588,7 @@ export function AnalysisJourney({ postUrl }: { postUrl: string }) {
                   else if (progress < 1) setStage(3);
                   else setStage(4);
                 } else if (data.trace) {
+                  setTraceData(data.trace);
                   setStage(4);
                   setTimeout(() => setShowResults(true), 1200);
                 } else if (data.error) {
@@ -718,7 +761,63 @@ export function AnalysisJourney({ postUrl }: { postUrl: string }) {
 
       {/* Results postcard */}
       <AnimatePresence>
-        {showResults && (
+        {error && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+            className="absolute inset-0 flex items-center justify-center px-4"
+            style={{
+              background: "rgba(253,246,227,0.85)",
+              backdropFilter: "blur(6px)",
+            }}
+          >
+            <div className="flex flex-col items-center gap-6 text-center">
+              <motion.p
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="text-lg font-bold"
+                style={{
+                  fontFamily: "var(--font-serif)",
+                  color: "var(--postal-red)",
+                }}
+              >
+                Something went wrong
+              </motion.p>
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.4 }}
+                className="text-sm"
+                style={{
+                  fontFamily: "var(--font-serif)",
+                  color: "var(--postal-ink-muted)",
+                }}
+              >
+                {error}
+              </motion.p>
+              <motion.button
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.6 }}
+                className="text-xs tracking-widest uppercase px-6 py-2"
+                style={{
+                  fontFamily: "var(--font-serif)",
+                  color: "var(--postal-ink-muted)",
+                  border: "1px solid var(--postal-ink-faint)",
+                  background: "var(--postal-paper)",
+                  borderRadius: "2px",
+                  cursor: "pointer",
+                }}
+                onClick={() => window.location.reload()}
+              >
+                Try Again
+              </motion.button>
+            </div>
+          </motion.div>
+        )}
+        {showResults && !error && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -742,7 +841,7 @@ export function AnalysisJourney({ postUrl }: { postUrl: string }) {
               >
                 Your postcard has arrived.
               </motion.p>
-              <ResultsPostcard postUrl={postUrl} />
+              <ResultsPostcard postUrl={postUrl} traceData={traceData} />
               <motion.button
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}

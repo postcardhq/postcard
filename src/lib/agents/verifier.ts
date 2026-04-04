@@ -1,7 +1,6 @@
 import { google } from "@ai-sdk/google";
 import { generateText } from "ai";
 import { z } from "zod";
-import type { Postcard } from "../vision/ocr";
 
 export const AuditResultSchema = z.object({
   originScore: z.number().min(0).max(1),
