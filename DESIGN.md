@@ -4,7 +4,19 @@
 > **Event:** PantherHacks 2026 (April 3–5, 2026)  
 > **Track:** Cybersecurity  
 > **Repository:** `postcard`  
-> **Stack:** TBD — this doc drives that decision
+> **Stack:** Web app — server-side pipeline (see Section 14)
+
+---
+
+## TL;DR — What We're Building
+
+A web app that takes a screenshot of a social media post, finds the original post URL, and scores how credible it is based on:
+- **Origin** — Can we locate the original post?
+- **Corroboration** — Do independent sources agree?
+- **Bias** — Is the screenshot's framing different from the source?
+- **Temporal** — Does the timestamp check out?
+
+The output is a **Postmark Score (0–100%)** with subscore breakdown available via progressive disclosure.
 
 ---
 
@@ -12,11 +24,14 @@
 
 **Tagline:** *Trace every post back to its source.*
 
-Postcard is a digital forensics tool that takes a screenshot or image of a social media post, traces it to its origin, and scores how much the post has drifted from its primary source. We visualize information flow the same way a postcard gets stamped and routed through postal systems — except our stamps are metadata, our routing is search triangulation, and our delivery confirmation is a **Postmark Score**.
+**Core problem:** Screenshots strip all context. By the time something goes viral it's been cropped, captioned, and misattributed. Postcard reverses that entropy by finding the original post URL and scoring how trustworthy the screenshot is.
 
-**Core insight:** Most people can't tell if what they saw online is real. Screenshots strip away all context — timestamp, handle, URL — and by the time something goes viral it's been cropped, captioned, and misattributed. Postcard reverses that entropy.
+**Workflow:** User uploads screenshot → Postcard locates the original post → fetches full metadata → compares against screenshot → outputs Postmark Score + subscore breakdown.
 
-**Emotional target:** The user sees something viral, feels uneasy about it, and comes to Postcard to find out: *is this real, where did it come from, and how much has it been twisted?*
+**Out of scope for now:**
+- Tracing chains of "who got info from where" (too hard — hard to prove attribution)
+- Wayback Machine historical lookups (future work)
+- Degrees of separation metaphor (misleading — we trace events directly, not chains)
 
 ---
 
@@ -24,217 +39,239 @@ Postcard is a digital forensics tool that takes a screenshot or image of a socia
 
 - **Timebox:** ~48 hours (April 3–5)
 - **Team size:** 2–4 people
-- **Goal:** Functional demo that judges can interact with
-- **Judging criteria:** Likely originality, technical difficulty, real-world utility, presentation
-
-**Strategy:** Ship a working end-to-end flow — upload → analyze → report — even if the underlying models are lightweight. Polish the "aha moment" (the Postmark Score + travel log visualization).
+- **Goal:** Functional end-to-end demo judges can interact with
+- **Scope:** Web app only. No mobile (Swift/Expo).
+- **Strategy:** Ship the core flow — upload → locate post → score — even if the underlying model calls are simple. Polish the score reveal and progressive disclosure.
 
 ---
 
 ## 3. The Postcard Pipeline
 
-```
-User Screenshot
-      │
-      ▼
-┌─────────────────────┐
-│  OCR + Vision Parse │  ← Gemini 2.0 Flash (or Mistral OCR)
-│  Extract: text,     │
-│  handles, timestamps│
-│  engagement counts  │
-└─────────┬───────────┘
-          │
-          ▼
-┌─────────────────────┐
-│  Triangulation      │  ← Google Search via Gemini API
-│  Agent               │     (site: filters, keyword extraction)
-│  Build search query  │
-│  Find source URL     │
-└─────────┬───────────┘
-          │
-          ▼
-┌─────────────────────┐
-│  Forensic Verifier  │  ← Live scrape + Wayback Machine
-│  3-way comparison:   │
-│   1. URL match?      │
-│   2. Timestamp       │
-│      consistent?     │
-│   3. UI fingerprint  │
-│      (platform CSS)  │
-└─────────┬───────────┘
-          │
-          ▼
-┌─────────────────────┐
-│  Postmark Score     │
-│  + Travel Log       │
-│  + Bias Report      │
-└─────────────────────┘
-```
+### Step 1: Post Locator (Gemini 3+ Multimodal)
+
+The first and most critical step. Given a screenshot, Gemini 3+ extracts the **original post URL** directly from the social platform.
+
+This is crucial because:
+- Screenshot text may be cropped (full description not visible)
+- Metadata (likes, shares, exact timestamp) may not appear in screenshot
+- We want the full, unmodified source to compare against
+
+**Input:** Screenshot image  
+**Output:** Original post URL (or null if not found)
+
+### Step 2: URL Verification
+
+If a URL is found, fetch it directly to extract:
+- Full post text (compare against screenshot)
+- Exact timestamp
+- Author/handle
+- Engagement counts
+- Any edit history
+
+### Step 3: Corroboration Search (if URL not found or supplementary)
+
+If the post cannot be located via direct URL, fall back to Google/Gemini web search:
+- Generate targeted search queries from screenshot content
+- Find independent sources reporting the same claim/event
+- Score corroboration based on number of independent vetted sources
+
+### Step 4: Bias Assessment (LLM Judge)
+
+LLM acts as a judge, comparing screenshot against the fetched source (or search results if no URL):
+- Caption changes?
+- Attribution drift?
+- Framing shifts?
+- Context removed?
+
+Outputs a **Bias Subscore (0–100)**.
+
+### Step 5: Postmark Score (Overall)
+
+Combine all subscores into a weighted **Postmark Score (0–100%)**.
 
 ---
 
-## 4. Postmark Score
+## 4. Postmark Score — Components & Weights
 
-A weighted confidence score S ∈ [0, 1]:
+### Score Constants (easily adjustable)
+
+```javascript
+const WEIGHTS = {
+  ORIGIN:         0.30,  // Can we locate the original post?
+  CORROBORATION:  0.25,  // Do independent sources corroborate?
+  BIAS:           0.25,  // Is the screenshot faithful to the source?
+  TEMPORAL:       0.20,  // Does the timestamp check out?
+};
+```
+
+> **Future work:** Optimize weights via user feedback or labeled dataset. For now, educated guesses illustrate the concept. Weights are arbitrary but dynamic — change the constants to rebalance.
+
+### Subscores
+
+| Subscore | Range | Method |
+|----------|-------|--------|
+| **Origin** | 0 or 1 | Binary: URL found (1) or not found (0) |
+| **Corroboration** | 0.0–1.0 | LLM counts independent vetted sources, scales 1→n |
+| **Bias** | 0.0–1.0 | LLM judge: semantic similarity (1 = identical, 0 = completely different) |
+| **Temporal** | 0.0–1.0 | Timestamp match or reasonable proximity |
+
+### Overall Postmark Score
 
 ```
-S = (w₁ · O) + (w₂ · T) + (w₃ · V)
-
-O = Origin:      Exact URL match found?        (binary 0/1)
-T = Temporal:    Timestamp consistent?         (0–1 scale)
-V = Visual:      UI/layout matches platform?  (0–1 scale)
+Postmark (%) = (
+  WEIGHTS.ORIGIN        × Origin
+  + WEIGHTS.CORROBORATION × Corroboration
+  + WEIGHTS.BIAS          × Bias
+  + WEIGHTS.TEMPORAL      × Temporal
+) × 100
 ```
 
-**Thresholds:**
+### UI: Progressive Disclosure
 
-| Score  | Label                | Meaning                          |
-|--------|----------------------|----------------------------------|
-| S > 0.9 | ✅ Verified Origin   | Primary source confirmed         |
-| 0.5–0.9 | ⚠️ Unreliable Postmark | Modified, parodied, or detunneled |
-| S < 0.5 | 🔴 Fabricated        | Fabricated or highly manipulated |
+- **Top level:** Postmark Score as a single percentage (e.g., "73%")
+- **Expandable:** Subscore breakdown (Origin: ✓, Corroboration: 2/3 sources, Bias: minor framing shift, Temporal: 3hrs off)
+- **Further:** Full LLM narrative explanation
 
 ---
 
-## 5. UI / UX — The "Travel Log"
+## 5. Vetted Source Allowlist (TLD-Permissive)
 
-When Postcard finishes analysis, it presents a **Travel Log** — a visual timeline of how the content moved:
+A source is "vetted" if it belongs to a recognized institutional or journalistic TLD:
 
-1. **The Source** — Original post with verified URL, timestamp, platform
-2. **The Deratives** — Reposts, screenshots, edits found in the wild
-3. **The Semantic Diff** — What changed between source and derivative (caption, handle, crop, context)
-4. **Bias Indicator** — How the framing shifted at each hop
+| Category | TLDs |
+|----------|------|
+| Government | `.gov`, `.mil` |
+| Academic | `.edu`, `.ac.uk`, `.ac.*` (international) |
+| NGOs / Nonprofits | `.org` |
+| News / Journalism | See below |
 
-**Design goal:** The UI should feel like tracing a package — satisfying, informative, clear about what it found and didn't find.
+**News domains (initial allowlist):**
+```
+reuters.com, apnews.com, ap.co, nytimes.com, washingtonpost.com,
+wsj.com, theguardian.com, bbc.com, bbc.co.uk, cnn.com, foxnews.com,
+nbcnews.com, abcnews.com, abc.net.au, cbsnews.com, pbs.org,
+npr.org, usatoday.com, latimes.com, politico.com, axios.com,
+huffpost.com, theatlantic.com, wired.com, arstechnica.com,
+techcrunch.com, theverge.com, independent.co.uk, dailymail.co.uk,
+mirror.co.uk, express.co.uk, sky.com, newsweek.com, time.com,
+forbes.com, bloomberg.com, reutersagency.com
+```
 
----
-
-## 6. Technical Approach
-
-### Frontend
-- **Next.js** or plain HTML/JS (timebox constraint — simplicity wins)
-- Drag-and-drop image upload
-- Animated score reveal
-- Travel log as a vertical timeline
-
-### Vision / OCR
-- **Gemini 2.0 Flash** via `generativeLanguage` API — use `parts` mode for image input
-- Fallback: base64 image in prompt, no OCR dependency
-- Extract: `@handles`, timestamps, engagement, logos, platform UI cues
-
-### Search / Triangulation
-- **Google Search tool** in Gemini (built-in `googleSearch` tool)
-- Gemini gets a system prompt as "Navigator Agent" — instructions to generate precise search queries from OCR output
-- Returns: candidate source URLs ranked by relevance
-
-### Verification
-- **Live scrape** of candidate URL via `curl` or `fetch` — compare metadata
-- **Wayback Machine** API for historical timestamps
-- **UI fingerprinting** — if time permits, compare CSS/colors to platform baseline (stretch goal)
-
-### Scoring
-- All scoring logic runs client-side or in a single API route
-- Gemini writes the bias/narrative summary; deterministic scoring in JS
+**TLD-permissive logic:** Any domain ending in `.gov`, `.mil`, `.edu`, `.ac.*`, or `.org` is automatically vetted. No need to enumerate every subdomain.
 
 ---
 
-## 7. Navigator Agent — System Prompt
+## 6. Bias Score — LLM as Judge
+
+**Method:** LLM compares screenshot text against fetched source (or corroboration results).
+
+**Prompt (simplified):**
+```
+You are a forensic media analyst. Compare the original text (A) against the screenshot text (B).
+
+Assess:
+1. Caption changes — what text was added, removed, or altered?
+2. Attribution drift — was the author credited correctly?
+3. Framing shifts — was the editorial angle changed?
+4. Context removal — was surrounding context stripped?
+
+Output a score 0–100 where 100 = identical framing, 0 = completely distorted.
+Also output a short narrative explanation of what changed.
+```
+
+**Important:** Due to the probabilistic nature of LLMs, repeated runs will NOT produce identical scores but will be **consistent within an acceptable range**. This is expected.
+
+---
+
+## 7. Caching (SQLite)
+
+**Cache key:** MD5 hash of uploaded image bytes  
+**Cache value:** Full analysis result (Postmark Score, all subscores, URL found, narrative)
+
+**Flow:**
+1. User uploads image
+2. Compute MD5 hash
+3. Check SQLite for existing result → instant response if hit
+4. If miss → run pipeline → store result → return
+
+---
+
+## 8. UI / UX
+
+- **Mobile-first responsive** — follows best practices, no bloat
+- **Dark mode** — `prefers-color-scheme` media query (no toggle needed)
+- **Minimal** — Black/dark background
+- **Core interaction:**
+  1. Drag-and-drop or tap to upload
+  2. Submit → loading state
+  3. Result: Postmark Score (%) + expand for subscore breakdown
+
+---
+
+## 9. Navigator Agent — System Prompt
 
 ```
-You are the Postcard Navigator Agent. Your job is to take OCR output from a social media screenshot and synthesize precise search queries to find the original source.
+You are the Postcard Navigator Agent. Given OCR output from a social media screenshot, find the original source URL.
 
-INPUT FORMAT:
-- Extracted text (could be caption, comment, post body)
-- Platform clues (YouTube UI, X/Twitter blue check, Reddit upvote icon, etc.)
-- Any @handles, timestamps, or engagement counts found
+INPUT:
+- Extracted text (caption, comment, post body)
+- Platform clues (Instagram UI, X/Twitter blue check, YouTube thumbnail style, Reddit upvote icon, etc.)
+- Any @handles, timestamps, engagement counts
 
-YOUR TASK:
-1. Identify the most search-dense phrase from the text (the "hook")
-2. Combine with platform context and handles to build 2–3 targeted queries
-3. Prioritize exact-match searches using quotes and site: operators
-4. Return ranked candidate URLs
-
-EXAMPLES:
-OCR: "I bought the moon" + YouTube UI detected
-Query: site:youtube.com "I bought the moon" MrBeast
-
-OCR: Screenshot of tweet by @someuser, text about inflation
-Query: site:x.com "inflation" "someuser" 2026
+TASK:
+1. Identify the most search-dense phrase (the "hook")
+2. Combine with platform context to generate 2–3 targeted queries
+3. Prioritize exact-match searches with quotes and site: operators
+4. Return candidate source URLs ranked by confidence
 
 OUTPUT:
-Return a JSON list:
 {
   "candidates": [
-    { "url": "...", "query": "...", "confidence": 0.9 },
-    ...
+    { "url": "...", "query": "...", "confidence": 0.9 }
   ]
 }
 
 CONSTRAINTS:
 - Maximum 3 search queries
-- Prefer primary sources over news aggregators
-- Bias toward recent content (last 90 days) unless timestamp in OCR suggests older
+- Prefer primary sources over aggregators
+- Bias toward recent content (last 90 days) unless OCR shows older timestamp
 ```
 
 ---
 
-## 8. Feature Priority — 48hr Slice
+## 10. Feature Priority
 
 ### Must Ship (MVP)
-- [ ] Image upload with drag-and-drop
-- [ ] Vision parse via Gemini (extract text + handles + timestamps)
-- [ ] Navigator agent query generation (via Gemini + Google Search)
-- [ ] Live URL verification (fetch metadata from candidate)
-- [ ] Postmark Score calculation
-- [ ] Travel Log output with bias summary
+- [ ] Image upload form (drag-and-drop)
+- [ ] Step 1: Post Locator (Gemini 3+ multimodal → post URL)
+- [ ] Step 2: URL fetch + metadata extraction
+- [ ] Step 3: Corroboration search (Gemini Google Search tool)
+- [ ] Step 4: Bias assessment (LLM judge)
+- [ ] Step 5: Postmark Score + progressive disclosure
+- [ ] SQLite caching
+- [ ] Deployed live URL (Vercel)
 
-### If Time Permits
-- [ ] Wayback Machine timestamp check
-- [ ] Multi-candidate ranking (show top 3 sources)
-- [ ] UI fingerprinting (platform CSS comparison)
-- [ ] Animated travel log visualization
-
----
-
-## 9. Differentiation & "Wow" Factor
-
-Most hackathon projects this weekend will be CRUD apps or RAG chatbots. Postcard stands out because:
-
-1. **It's visual and interactive** — judges can upload their own screenshot and get an instant result
-2. **It has a strong metaphor** — "postcard" + "travel log" + "postmark score" are immediately understandable
-3. **It has real-world urgency** — misinformation is top-of-mind for everyone
-4. **The demo is the story** — upload a viral tweet screenshot, watch Postcard find it, see the score drop if it's been manipulated
-
-**Demo script:**
-1. Open Postcard on screen
-2. Pull up a known viral tweet on your phone
-3. Screenshot it
-4. Upload to Postcard
-5. Watch it trace back to the original in real time
-6. Show the Postmark Score and Travel Log
+### Future Work
+- [ ] Wayback Machine historical lookup
+- [ ] Weight optimization (labeled dataset or user feedback)
+- [ ] Mobile app (Swift/Expo)
+- [ ] Opinion vs. factual disambiguation
 
 ---
 
-## 10. Tech Stack Decision
+## 11. Tech Stack
 
-| Layer         | Choice                          | Reason                                           |
-|---------------|---------------------------------|--------------------------------------------------|
-| Frontend      | Next.js or vanilla HTML/JS      | Speed to MVP; Tailwind for styling              |
-| Vision/OCR    | Gemini 2.0 Flash (image input)  | Native multimodal; Google's own Search tool built in |
-| Search        | Gemini `googleSearch` tool      | Tight integration; no extra API surface          |
-| Verification  | Fetch + Wayback API             | Two lines of code; high signal                  |
-| Hosting       | Zo Space or deploy to Vercel    | Fastest path to live URL for demo               |
+| Layer | Choice | Reason |
+|-------|--------|--------|
+| Frontend | Next.js or vanilla HTML/JS + Tailwind | Speed to MVP |
+| Vision / URL extraction | Gemini 3+ (multimodal image input) | Native multimodal; finds post URL directly |
+| Search | Gemini `googleSearch` tool | Built into Gemini; no extra API keys |
+| Bias scoring | Gemini (LLM judge) | Prompt-based; no extra model needed |
+| Persistence | SQLite | Server-side caching and storage |
+| Hosting | Vercel (free SSR) | Fastest path to live URL |
 
 **Key API:** `generativeLanguage.googleapis.com` — configure in [Settings > Advanced](/?t=settings&s=advanced) as `GEMINI_API_KEY`.
 
 ---
 
-## 11. Open Questions
-
-- [ ] Do judges expect a deployed URL, or is local demo OK?
-- [ ] Is there a mandatory demo video / presentation format?
-- [ ] What APIs are available at the venue? (Network restrictions?)
-- [ ] Should we target mobile-first or desktop? (Judges may use their phones)
-
----
-
-*Last updated: 2026-04-03 17:40 UTC*
+*Last updated: 2026-04-03 21:05 UTC*
