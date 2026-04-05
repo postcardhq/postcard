@@ -6,19 +6,19 @@
 
 **Postcard** is a digital forensics tool that takes a social media post and traces it back to its definitive origin—calculating a **postcard score** of credibility by auditing how much the content has drifted from the primary source.
 
-## PantherHacks 2026 submission
+## Hackathon submission
 
 **Track:** [Cybersecurity](https://pantherhacks2026.devpost.com/)  
 **Challenge:** Rebuilding trust in a "post-truth" digital era.  
 **Pitch Script:** [View Video Script](./PITCH.md)
 
-## How it works
+## Flow
 
 **User flow:** Enter Post URL → Forensic Pipeline Runs → Postcard Score + Subscore Breakdown appears.
 
 Postcard prioritizes the direct URL entrypoint to ensure absolute forensic precision, while maintaining support for screenshot-to-URL resolution as an additional quality-of-life feature.
 
-## What it does
+## Product
 
 **Postcard** is a digital forensics pipeline that takes a social media post URL, traces it back to its original source, and produces a **postcard score (0–100%)** measuring how much the content has drifted from the truth.
 
@@ -28,7 +28,7 @@ Postcard prioritizes the direct URL entrypoint to ensure absolute forensic preci
 
 Screenshots strip all context. By the time something goes viral, it's been cropped, captioned, and misattributed. A screenshot of a tweet looks nothing like the original tweet. Postcard reverses this entropy by finding the primary source and auditing it for forensic consistency.
 
-### The solution: the "Postcard" pipeline
+### Solution
 
 We built a 4-stage forensic pipeline focused on deep audit log generation and corroboration for social media posts:
 

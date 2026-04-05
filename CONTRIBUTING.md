@@ -1,8 +1,8 @@
-# Postcard contributor notes
+# Contributor notes
 
 This document provides technical context and setup instructions for developers and contributors to the **Postcard** project.
 
-## Quick start
+## Setup
 
 To set up the development environment, perform the following steps:
 
@@ -46,7 +46,7 @@ To set up the development environment, perform the following steps:
     npm run dev
     ```
 
-## Environment configuration
+## Configuration
 
 Postcard supports two primary development modes, toggled via the `NEXT_PUBLIC_FAKE_PIPELINE` environment variable in your `.env` file.
 
@@ -96,14 +96,14 @@ graph TD
 
 _\* Reddit keys are optional but recommended for higher rate limits._
 
-## Database management
+## Database
 
 Postcard uses **Drizzle ORM** with **SQLite** for local development.
 
 - **Sync Schema:** Use `npm run db:push` to apply schema changes from `src/db/schema.ts` to `local.db` without migrations.
 - **Inspect Data:** Use `npm run db:studio` to open the Drizzle Studio GUI for browsing cached analyses and forensic logs.
 
-## Technical stack
+## Stack
 
 Postcard utilizes a modern, type-safe stack designed for forensic performance and developer velocity.
 
@@ -115,7 +115,7 @@ Postcard utilizes a modern, type-safe stack designed for forensic performance an
 | **Storage**       | Drizzle + libSQL (Turso) | Ensures type-safe libSQL persistence for forensic logs.          |
 | **Automation**    | Playwright / sharp       | Handles headless scraping and image preprocessing.               |
 
-## AI developer experience
+## AI SDK
 
 The Postcard pipeline relies heavily on the **[Vercel AI SDK v6](https://sdk.vercel.ai/)** for complex agentic orchestration.
 
