@@ -53,6 +53,49 @@ Postcard supports two primary development modes, toggled via the `NEXT_PUBLIC_FA
 - **Fake Mode (`true`):** Uses mock data for all forensic stages. No Gemini API key or external scraping is required. This is the default for rapid UI/UX development.
 - **Live Mode (`false`):** Executes the full forensic pipeline (OCR, Navigator, Auditor, Corroborator). Requires a valid `GOOGLE_GENERATIVE_AI_API_KEY` from **[Google AI Studio](https://aistudio.google.com/app/apikey)**.
 
+### Specialized ingestion keys (optional)
+
+To improve ingestion reliability for platforms that often restrict generic scrapers, you can provide the following optional keys in your `.env`:
+
+- **Instagram:** Add `INSTAGRAM_ACCESS_TOKEN` from your **[Meta for Developers](https://developers.facebook.com/)** app to enable high-fidelity oEmbed data.
+- **Reddit:** Add `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`, `REDDIT_USERNAME`, and `REDDIT_PASSWORD` for authenticated API access.
+- **X (Twitter) & TikTok:** These currently utilize no-auth oEmbed endpoints, but placeholders are available in `.env.example` for future-proofing.
+
+If these keys are omitted, Postcard gracefully falls back to **Jina Reader** for best-effort ingestion.
+
+### Ingestion strategy logic
+
+When Postcard is in **Live Mode**, it uses a multi-tier strategy to retrieve post data. The following diagram illustrates how the system chooses between specialized clients and the Jina fallback:
+
+```mermaid
+graph TD
+    A[Post URL submitted] --> B{Strategy Detection}
+    B -- "Reddit/X/TikTok/YT" --> C{Key Required?}
+    B -- "Unknown Platform" --> G[JinaPostClient]
+
+    C -- "No / Key Present" --> D[Specialized Client]
+    C -- "Yes & Key Missing" --> E[Trigger Fallback]
+
+    D -- "Success" --> F[UnifiedPost Result]
+    D -- "Failure (403/404/Limit)" --> E
+
+    E --> G
+    G --> F
+```
+
+#### Platform configuration reference
+
+| Platform        | Key Required? | Behavior Without Key         | Primary Strategy      |
+| :-------------- | :------------ | :--------------------------- | :-------------------- |
+| **Reddit**      | No\*          | Uses public `.json` endpoint | `RedditPostClient`    |
+| **YouTube**     | No            | Uses public oEmbed API       | `YoutubePostClient`   |
+| **X (Twitter)** | No            | Uses public oEmbed API       | `XPostClient`         |
+| **TikTok**      | No            | Uses public oEmbed API       | `TikTokPostClient`    |
+| **Instagram**   | **Yes**       | **Falls back to Jina**       | `InstagramPostClient` |
+| **Others**      | No            | Hits Jina Reader directly    | `JinaPostClient`      |
+
+_\* Reddit keys are optional but recommended for higher rate limits._
+
 ## Database management
 
 Postcard uses **Drizzle ORM** with **SQLite** for local development.
