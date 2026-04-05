@@ -32,15 +32,6 @@ const TRUSTED_DOMAINS = [
   "wikipedia.org",
 ] as const;
 
-const PlatformDorkPatterns: Record<string, (query: string) => string> = {
-  X: (query: string) =>
-    `site:x.com OR site:twitter.com "${query.slice(0, 100)}"`,
-  YouTube: (query: string) => `site:youtube.com "${query.slice(0, 80)}"`,
-  Reddit: (query: string) => `site:reddit.com "${query.slice(0, 80)}"`,
-  Instagram: (query: string) => `site:instagram.com "${query.slice(0, 80)}"`,
-  Other: (query: string) => `"${query.slice(0, 100)}"`,
-};
-
 export const CorroborationSourceSchema = z.object({
   url: z.string().url(),
   title: z.string(),

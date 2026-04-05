@@ -223,8 +223,8 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
   const rafRef = useRef<number>(0);
 
   const handleShare = async () => {
-    const url = `${window.location.origin}/${report.triangulation.targetUrl}`;
-    await navigator.clipboard.writeText(url);
+    const shareUrl = `${window.location.origin}/postcards?url=${encodeURIComponent(report.triangulation.targetUrl ?? "")}`;
+    await navigator.clipboard.writeText(shareUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

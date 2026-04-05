@@ -212,12 +212,23 @@ export async function processPostcardFromUrl(
     const post = await unifiedPostClient.fetch(url);
     const markdown = post.markdown;
 
-    if (
-      !markdown ||
-      markdown.length < 50 ||
-      post.platform === "Other" ||
-      markdown.includes("Checking if the site connection is secure")
-    ) {
+    const failureReasons: string[] = [];
+    if (!markdown || markdown.length < 50) {
+      failureReasons.push("Content too short or empty");
+    }
+    if (post.platform === "Other") {
+      failureReasons.push("Platform not recognized or supported");
+    }
+    if (markdown?.includes("Checking if the site connection is secure")) {
+      failureReasons.push("Cloudflare or security check detected");
+    }
+    if (markdown?.includes("login") || markdown?.includes("sign in")) {
+      failureReasons.push("Login or signup wall detected");
+    }
+
+    if (failureReasons.length > 0) {
+      const errorSummary = `Unable to access this content. ${failureReasons.join(". ")}. This may be due to login requirements, platform restrictions, or network issues.`;
+
       return {
         url,
         markdown: markdown || "",
@@ -226,11 +237,12 @@ export async function processPostcardFromUrl(
           primarySources: [],
           queriesExecuted: [],
           verdict: "insufficient_data" as const,
-          summary:
-            "Unable to access this content. The link may require login or may be restricted.",
+          summary: errorSummary,
           confidenceScore: 0,
           corroborationLog: [
-            "The platform blocked data ingestion or returned insufficient content.",
+            `Scraping failed: ${failureReasons.join("; ")}`,
+            "The platform may require authentication or block automated access.",
+            `Retrieved markdown length: ${markdown?.length ?? 0} characters`,
           ],
         },
         postcardScore: 0,
