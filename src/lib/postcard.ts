@@ -73,6 +73,7 @@ export const PostcardReportSchema = z.object({
   }),
   corroboration: CorroborationSchema,
   timestamp: z.string().datetime(),
+  analysisId: z.string().optional(),
 });
 
 export type PostcardReport = z.infer<typeof PostcardReportSchema>;
@@ -82,6 +83,7 @@ export const PostcardRequestSchema = z
     url: z.string().url().optional(),
     image: z.string().optional(), // base64 encoded image
     userApiKey: z.string().optional(),
+    forceRefresh: z.boolean().optional(),
   })
   .refine((data) => data.url || data.image, {
     message: "Either url or image must be provided",
@@ -96,6 +98,7 @@ export const PostcardResponseSchema = z.object({
   corroboration: CorroborationSchema,
   postcardScore: z.number().min(0).max(1),
   timestamp: z.string().datetime(),
+  analysisId: z.string().optional(),
   forensicReport: PostcardReportSchema.optional(), // Include full report if requested
 });
 
@@ -148,7 +151,8 @@ export async function processPostcardFromUrl(
   url: string,
   userApiKey?: string,
   onProgress?: ProgressCallback,
-): Promise<PostcardResponse> {
+  forceRefresh?: boolean,
+): Promise<PostcardResponse & { analysisId?: string }> {
   const progress = (stage: string, message: string, p: number) => {
     onProgress?.(stage, message, p);
   };
@@ -159,35 +163,38 @@ export async function processPostcardFromUrl(
   }
 
   try {
-    const cachedAnalysis = await db
-      .select()
-      .from(analyses)
-      .innerJoin(posts, eq(posts.url, url))
-      .orderBy(sql`${analyses.hits} DESC`)
-      .limit(1);
+    if (!forceRefresh) {
+      const cachedAnalysis = await db
+        .select()
+        .from(analyses)
+        .innerJoin(posts, eq(posts.url, url))
+        .orderBy(sql`${analyses.createdAt} DESC`)
+        .limit(1);
 
-    if (cachedAnalysis.length > 0) {
-      await db
-        .update(analyses)
-        .set({ hits: sql`${analyses.hits} + 1` })
-        .where(eq(analyses.id, cachedAnalysis[0].analyses.id));
+      if (cachedAnalysis.length > 0) {
+        const analysis = cachedAnalysis[0].analyses;
+        await db
+          .update(analyses)
+          .set({ hits: sql`${analyses.hits} + 1` })
+          .where(eq(analyses.id, analysis.id));
 
-      const analysis = cachedAnalysis[0].analyses;
-      return {
-        url: analysis.url,
-        markdown: cachedAnalysis[0].posts.markdown || "",
-        platform: analysis.platform || "Other",
-        corroboration: {
-          primarySources: JSON.parse((analysis.primarySources as string) || "[]"),
-          queriesExecuted: JSON.parse((analysis.queriesExecuted as string) || "[]"),
-          verdict: (analysis.verdict as Corroboration["verdict"]) || "insufficient_data",
-          summary: (analysis.summary as string) || "",
-          confidenceScore: analysis.confidenceScore || 0,
-          corroborationLog: JSON.parse((analysis.corroborationLog as string) || "[]"),
-        },
-        postcardScore: analysis.postcardScore,
-        timestamp: analysis.createdAt.toISOString(),
-      };
+        return {
+          url: analysis.url,
+          markdown: cachedAnalysis[0].posts.markdown || "",
+          platform: analysis.platform || "Other",
+          corroboration: {
+            primarySources: JSON.parse((analysis.primarySources as string) || "[]"),
+            queriesExecuted: JSON.parse((analysis.queriesExecuted as string) || "[]"),
+            verdict: (analysis.verdict as Corroboration["verdict"]) || "insufficient_data",
+            summary: (analysis.summary as string) || "",
+            confidenceScore: analysis.confidenceScore || 0,
+            corroborationLog: JSON.parse((analysis.corroborationLog as string) || "[]"),
+          },
+          postcardScore: analysis.postcardScore,
+          timestamp: analysis.createdAt.toISOString(),
+          analysisId: analysis.id,
+        };
+      }
     }
 
     progress("scraping", "Fetching content via UnifiedPostClient...", 0.1);
@@ -257,15 +264,70 @@ export async function processPostcardFromUrl(
         .where(eq(posts.url, url))
         .limit(1);
 
+      let pId: string;
       if (existingPost.length > 0) {
+        pId = existingPost[0].id;
+        // Update the post content just in case it changed
         await db
-          .update(analyses)
-          .set({ hits: sql`${analyses.hits} + 1` })
-          .where(eq(analyses.postId, existingPost[0].id));
+          .update(posts)
+          .set({
+            markdown,
+            mainText: markdown.slice(0, 500),
+            updatedAt: new Date(),
+          })
+          .where(eq(posts.id, pId));
+
+        // Check for existing analysis to update
+        const existingAnalysis = await db
+          .select()
+          .from(analyses)
+          .where(eq(analyses.postId, pId))
+          .limit(1);
+
+        if (existingAnalysis.length > 0) {
+          await db
+            .update(analyses)
+            .set({
+              postcardScore,
+              originScore: 0.5,
+              corroborationScore: corroboration.confidenceScore,
+              biasScore: 0.5,
+              temporalScore: 0.5,
+              verdict: corroboration.verdict,
+              summary: corroboration.summary,
+              confidenceScore: corroboration.confidenceScore,
+              primarySources: JSON.stringify(corroboration.primarySources),
+              queriesExecuted: JSON.stringify(corroboration.queriesExecuted),
+              corroborationLog: JSON.stringify(corroboration.corroborationLog),
+              status: "completed",
+              updatedAt: new Date(),
+              createdAt: new Date(), // Reset creation time on full re-eval
+            })
+            .where(eq(analyses.id, existingAnalysis[0].id));
+        } else {
+          await db.insert(analyses).values({
+            id: crypto.randomUUID(),
+            postId: pId,
+            url,
+            platform,
+            postcardScore,
+            originScore: 0.5,
+            corroborationScore: corroboration.confidenceScore,
+            biasScore: 0.5,
+            temporalScore: 0.5,
+            verdict: corroboration.verdict,
+            summary: corroboration.summary,
+            confidenceScore: corroboration.confidenceScore,
+            primarySources: JSON.stringify(corroboration.primarySources),
+            queriesExecuted: JSON.stringify(corroboration.queriesExecuted),
+            corroborationLog: JSON.stringify(corroboration.corroborationLog),
+            status: "completed",
+          });
+        }
       } else {
-        const postId = crypto.randomUUID();
+        pId = crypto.randomUUID();
         await db.insert(posts).values({
-          id: postId,
+          id: pId,
           url,
           platform,
           markdown,
@@ -274,7 +336,7 @@ export async function processPostcardFromUrl(
 
         await db.insert(analyses).values({
           id: crypto.randomUUID(),
-          postId,
+          postId: pId,
           url,
           platform,
           postcardScore,
@@ -291,11 +353,24 @@ export async function processPostcardFromUrl(
           status: "completed",
         });
       }
+      const aId = (
+        await db.select().from(analyses).where(eq(analyses.postId, pId)).limit(1)
+      )[0]?.id;
+
+      progress("complete", "Postcard complete", 1);
+
+      return PostcardResponseSchema.parse({
+        url,
+        markdown,
+        platform,
+        corroboration,
+        postcardScore,
+        timestamp: new Date().toISOString(),
+        analysisId: aId,
+      });
     } catch (dbError) {
       console.error("Database error:", dbError);
     }
-
-    progress("complete", "Postcard complete", 1);
 
     return PostcardResponseSchema.parse({
       url,

@@ -206,11 +206,12 @@ type ApiProgress = {
 async function fetchReportWithProgress(
   postUrl: string,
   onProgress: (progress: ApiProgress) => void,
+  forceRefresh?: boolean,
 ): Promise<PostcardReport> {
   const response = await fetch("/api/postcards", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ url: postUrl }),
+    body: JSON.stringify({ url: postUrl, forceRefresh }),
   });
 
   if (!response.ok || !response.body) {
@@ -252,10 +253,12 @@ async function fetchReportWithProgress(
 
 export function AnalysisJourney({
   postUrl,
+  forceRefresh,
   onComplete,
   onReset,
 }: {
   postUrl: string;
+  forceRefresh?: boolean;
   onComplete: (report: PostcardReport) => void;
   onReset: () => void;
 }) {
@@ -273,17 +276,21 @@ export function AnalysisJourney({
   }, [onComplete]);
 
   useEffect(() => {
-    fetchReportWithProgress(postUrl, (progress) => {
-      const { stage: serverStage, message, progress: pct } = progress;
+    fetchReportWithProgress(
+      postUrl,
+      (progress) => {
+        const { stage: serverStage, message, progress: pct } = progress;
 
-      setStageLabel(serverStage === "starting" ? "Dispatched" : serverStage);
-      setStageDetail(message);
+        setStageLabel(serverStage === "starting" ? "Dispatched" : serverStage);
+        setStageDetail(message);
 
-      if (pct < 0.33) setStage(1);
-      else if (pct < 0.66) setStage(2);
-      else if (pct < 1) setStage(3);
-      else setStage(4);
-    })
+        if (pct < 0.33) setStage(1);
+        else if (pct < 0.66) setStage(2);
+        else if (pct < 1) setStage(3);
+        else setStage(4);
+      },
+      forceRefresh,
+    )
       .then((report) => {
         // If we have markdown content, we "traced" it.
         // We only show the error if we have NO content AND insufficient data.

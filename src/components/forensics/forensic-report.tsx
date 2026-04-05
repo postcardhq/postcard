@@ -9,6 +9,8 @@ import {
   MagnifyingGlass,
   ShieldCheck,
   ArrowRight,
+  ShareNetwork,
+  ArrowsClockwise,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import type {
@@ -635,20 +637,56 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
         />
 
         <motion.div
-          className="flex justify-center"
+          className="flex flex-wrap justify-center gap-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1.2, duration: 0.4 }}
         >
           <button
-            className="text-xs tracking-widest uppercase px-6 py-2 cursor-pointer"
+            className="flex items-center gap-2 text-xs tracking-widest uppercase px-6 py-2 cursor-pointer transition-colors"
             style={{
               fontFamily: "var(--font-serif)",
               color: "var(--postal-ink-muted)",
               border: "1px solid var(--postal-ink-faint)",
               background: "var(--postal-paper)",
             }}
-            onClick={() => window.location.reload()}
+            onClick={async () => {
+              const url = `${window.location.origin}/reports/${report.analysisId}`;
+              await navigator.clipboard.writeText(url);
+              alert("Share link copied to clipboard!");
+            }}
+          >
+            <ShareNetwork size={14} />
+            Copy Share Link
+          </button>
+
+          <button
+            className="flex items-center gap-2 text-xs tracking-widest uppercase px-6 py-2 cursor-pointer transition-colors hover:bg-[var(--postal-amber-faint)]"
+            style={{
+              fontFamily: "var(--font-serif)",
+              color: "var(--postal-ink-muted)",
+              border: "1px solid var(--postal-amber-faint)",
+              background: "var(--postal-paper)",
+            }}
+            onClick={() => {
+              window.location.href = `/?url=${encodeURIComponent(report.triangulation.targetUrl || "")}&forceRefresh=true`;
+            }}
+          >
+            <ArrowsClockwise size={14} />
+            Re-verify Latest
+          </button>
+
+          <button
+            className="text-xs tracking-widest uppercase px-6 py-2 cursor-pointer opacity-60 hover:opacity-100 transition-opacity"
+            style={{
+              fontFamily: "var(--font-serif)",
+              color: "var(--postal-ink-muted)",
+              border: "1px solid var(--postal-ink-faint)",
+              background: "transparent",
+            }}
+            onClick={() => {
+              window.location.href = "/";
+            }}
           >
             Trace Another Post
           </button>

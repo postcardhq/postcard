@@ -25,7 +25,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const { url, image, userApiKey } = parsed.data;
+  const { url, image, userApiKey, forceRefresh } = parsed.data;
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -63,6 +63,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           (stage, message, progress) => {
             send("progress", { stage, message, progress });
           },
+          forceRefresh,
         );
 
         // Build forensic report from URL-based response
@@ -89,6 +90,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           },
           corroboration: report.corroboration,
           timestamp: report.timestamp,
+          analysisId: report.analysisId,
         };
 
         send("complete", {
