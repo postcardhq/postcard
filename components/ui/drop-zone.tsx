@@ -453,6 +453,8 @@ export function DropZone({
                 <input
                   ref={inputRef}
                   type="url"
+                  placeholder="https://x.com/user/status/1234567890"
+                  aria-label="Enter social media post URL"
                   className="w-full px-4 py-3 text-sm text-center bg-transparent"
                   style={{
                     fontFamily: "var(--font-serif)",
@@ -481,6 +483,7 @@ export function DropZone({
                       background: "var(--postal-paper-2)",
                       borderRadius: "2px",
                     }}
+                    aria-hidden="true"
                   >
                     <AnimatedPlaceholder />
                   </div>

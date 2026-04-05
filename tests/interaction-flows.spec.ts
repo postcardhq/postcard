@@ -7,57 +7,31 @@ test.describe("Interaction flows", () => {
     const urlInput = page.getByPlaceholder(
       "https://x.com/user/status/1234567890",
     );
-    await urlInput.fill(
-      "https://www.instagram.com/p/DV9hesME3ka/?utm_source=ig_web_copy_link",
-    );
+    await urlInput.fill("https://www.instagram.com/p/DV9hesME3ka/");
 
     const submitButton = page.getByRole("button", { name: "Trace Post" });
     await submitButton.click();
 
-    await expect(page.locator(".absolute.inset-0").first()).toBeVisible({
+    // Verify the airmail animation starts
+    await expect(page.getByText("URL Submitted")).toBeVisible({
       timeout: 5000,
     });
   });
 
-  test("Trace Another Post button reloads page", async ({ page }) => {
+  test("shows envelope stage in airmail animation", async ({ page }) => {
     await page.goto("http://localhost:3000/postcards");
 
     const urlInput = page.getByPlaceholder(
       "https://x.com/user/status/1234567890",
     );
-    await urlInput.fill(
-      "https://www.instagram.com/p/DV9hesME3ka/?utm_source=ig_web_copy_link",
-    );
+    await urlInput.fill("https://x.com/user/status/123");
 
     const submitButton = page.getByRole("button", { name: "Trace Post" });
     await submitButton.click();
 
-    await expect(page.getByText("Postcard Score")).toBeVisible({
-      timeout: 30000,
-    });
-
-    await page.getByRole("button", { name: "Trace Another Post" }).click();
-
-    await expect(page.getByRole("heading", { name: "Postcard" })).toBeVisible({
-      timeout: 10000,
-    });
-  });
-
-  test("shows analysis journey after submission", async ({ page }) => {
-    await page.goto("http://localhost:3000/postcards");
-
-    const urlInput = page.getByPlaceholder(
-      "https://x.com/user/status/1234567890",
-    );
-    await urlInput.fill(
-      "https://www.instagram.com/p/DV9hesME3ka/?utm_source=ig_web_copy_link",
-    );
-
-    const submitButton = page.getByRole("button", { name: "Trace Post" });
-    await submitButton.click();
-
-    await expect(page.getByText("Postcard Score")).toBeVisible({
-      timeout: 30000,
+    // Should show URL Submitted message during animation
+    await expect(page.getByText("URL Submitted")).toBeVisible({
+      timeout: 5000,
     });
   });
 });

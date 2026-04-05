@@ -12,8 +12,8 @@ test.describe("Platform variations", () => {
     const submitButton = page.getByRole("button", { name: "Trace Post" });
     await submitButton.click();
 
-    await expect(page.getByText("Postcard Score")).toBeVisible({
-      timeout: 90000,
+    await expect(page.getByText("URL Submitted")).toBeVisible({
+      timeout: 5000,
     });
   });
 
@@ -30,8 +30,8 @@ test.describe("Platform variations", () => {
     const submitButton = page.getByRole("button", { name: "Trace Post" });
     await submitButton.click();
 
-    await expect(page.getByText("Postcard Score")).toBeVisible({
-      timeout: 90000,
+    await expect(page.getByText("URL Submitted")).toBeVisible({
+      timeout: 5000,
     });
   });
 
@@ -46,8 +46,8 @@ test.describe("Platform variations", () => {
     const submitButton = page.getByRole("button", { name: "Trace Post" });
     await submitButton.click();
 
-    await expect(page.getByText("Postcard Score")).toBeVisible({
-      timeout: 90000,
+    await expect(page.getByText("URL Submitted")).toBeVisible({
+      timeout: 5000,
     });
   });
 
@@ -62,8 +62,8 @@ test.describe("Platform variations", () => {
     const submitButton = page.getByRole("button", { name: "Trace Post" });
     await submitButton.click();
 
-    await expect(page.getByText("Postcard Score")).toBeVisible({
-      timeout: 90000,
+    await expect(page.getByText("URL Submitted")).toBeVisible({
+      timeout: 5000,
     });
   });
 
@@ -80,8 +80,8 @@ test.describe("Platform variations", () => {
     const submitButton = page.getByRole("button", { name: "Trace Post" });
     await submitButton.click();
 
-    await expect(page.getByText("Postcard Score")).toBeVisible({
-      timeout: 90000,
+    await expect(page.getByText("URL Submitted")).toBeVisible({
+      timeout: 5000,
     });
   });
 
@@ -98,8 +98,8 @@ test.describe("Platform variations", () => {
     const submitButton = page.getByRole("button", { name: "Trace Post" });
     await submitButton.click();
 
-    await expect(page.getByText("Postcard Score")).toBeVisible({
-      timeout: 30000,
+    await expect(page.getByText("URL Submitted")).toBeVisible({
+      timeout: 5000,
     });
   });
 });

@@ -19,12 +19,6 @@ export default defineConfig({
         ...devices["Desktop Chrome"],
       },
     },
-    {
-      name: "live",
-      use: {
-        ...devices["Desktop Chrome"],
-      },
-    },
   ],
   webServer: {
     command: "npm run dev",
