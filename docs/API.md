@@ -1,5 +1,6 @@
 # Postcard API Documentation
 
+> Official Hosted Docs: [Mintlify](https://www.mintlify.com/postcardhq/postcard)
 > Last updated: April 2026
 
 Postcard provides a public REST API for forensic verification of social media posts.

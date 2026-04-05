@@ -114,6 +114,7 @@ the source without the fragility of manual extraction.
 - [docs/devpost.md](docs/devpost.md): High-level summary for
   the PantherHacks 2026 Devpost submission.
 - [docs/PITCH.md](docs/PITCH.md): Pitch script and video cues.
+- [Mintlify Documentation](https://www.mintlify.com/postcardhq/postcard): Hosted, interactive documentation for Postcard.
 - [docs/API.md](docs/API.md): Full API reference with examples.
 - [public/openapi.json](public/openapi.json): OpenAPI v3.1 Specification for SDK generation.
 

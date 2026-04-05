@@ -110,9 +110,7 @@
             "description": "Bypass cache and perform a fresh audit"
           }
         },
-        "required": [
-          "url"
-        ]
+        "required": ["url"]
       },
       "PostcardReport": {
         "type": "object",
@@ -122,13 +120,7 @@
             "properties": {
               "platform": {
                 "type": "string",
-                "enum": [
-                  "X",
-                  "YouTube",
-                  "Reddit",
-                  "Instagram",
-                  "Other"
-                ]
+                "enum": ["X", "YouTube", "Reddit", "Instagram", "Other"]
               },
               "mainText": {
                 "type": "string"
@@ -201,11 +193,7 @@
                 },
                 "relevance": {
                   "type": "string",
-                  "enum": [
-                    "supporting",
-                    "refuting",
-                    "neutral"
-                  ]
+                  "enum": ["supporting", "refuting", "neutral"]
                 }
               }
             }
