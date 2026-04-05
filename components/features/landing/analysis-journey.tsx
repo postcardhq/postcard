@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import type { PostcardReport } from "@/src/lib/postcard";
+import { PaperPlane, Cloud } from "@/components/illustrations";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -31,103 +32,6 @@ const STAGES: StageInfo[] = [
     mailboxX: 78,
   },
 ];
-
-function PaperPlane({ className = "" }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 120 60"
-      className={className}
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <polygon
-        points="0,32 120,8 82,32"
-        fill="var(--postal-paper)"
-        stroke="var(--postal-ink-muted)"
-        strokeWidth="0.8"
-      />
-      <polygon
-        points="0,32 82,32 52,52"
-        fill="var(--postal-paper-2)"
-        stroke="var(--postal-ink-muted)"
-        strokeWidth="0.8"
-      />
-      <line
-        x1="0"
-        y1="32"
-        x2="82"
-        y2="32"
-        stroke="var(--postal-ink-muted)"
-        strokeWidth="0.7"
-      />
-      <line
-        x1="30"
-        y1="20"
-        x2="75"
-        y2="14"
-        stroke="var(--postal-red)"
-        strokeWidth="1"
-        opacity="0.4"
-      />
-      <line
-        x1="30"
-        y1="24"
-        x2="75"
-        y2="18"
-        stroke="var(--postal-blue)"
-        strokeWidth="1"
-        opacity="0.4"
-      />
-    </svg>
-  );
-}
-
-function Cloud({
-  cx,
-  cy,
-  scale = 1,
-  delay = 0,
-}: {
-  cx: number;
-  cy: number;
-  scale?: number;
-  delay?: number;
-}) {
-  return (
-    <g
-      transform={`translate(${cx},${cy}) scale(${scale})`}
-      style={{
-        animation: `cloud-drift ${14 + delay}s ease-in-out infinite alternate`,
-      }}
-    >
-      <ellipse
-        cx="0"
-        cy="0"
-        rx="36"
-        ry="20"
-        fill="var(--postal-cloud)"
-        opacity="0.88"
-      />
-      <ellipse
-        cx="26"
-        cy="-9"
-        rx="26"
-        ry="17"
-        fill="var(--postal-cloud)"
-        opacity="0.84"
-      />
-      <ellipse
-        cx="-24"
-        cy="-5"
-        rx="20"
-        ry="15"
-        fill="var(--postal-cloud)"
-        opacity="0.84"
-      />
-      <ellipse cx="6" cy="-16" rx="16" ry="12" fill="white" opacity="0.65" />
-    </g>
-  );
-}
 
 function Mailbox({
   active,
@@ -276,7 +180,6 @@ export function AnalysisJourney({
   }, [onComplete]);
 
   useEffect(() => {
-    // Dynamically update document title based on forensic progress
     const originalTitle = document.title;
     if (error) {
       document.title = "Analysis Failed | Postcard";
@@ -305,8 +208,6 @@ export function AnalysisJourney({
       forceRefresh,
     )
       .then((report) => {
-        // If we have markdown content, we "traced" it.
-        // We only show the error if we have NO content AND insufficient data.
         const hasContent = !!(
           report.markdown && report.markdown.trim().length > 50
         );

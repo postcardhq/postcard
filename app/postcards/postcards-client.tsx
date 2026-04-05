@@ -2,10 +2,8 @@
 
 import { useState, useCallback, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Hero } from "@/components/ui/hero";
-import { DropZone } from "@/components/ui/drop-zone";
-import { AnalysisJourney } from "@/components/ui/analysis-journey";
-import { ForensicReport } from "@/src/components/forensics/forensic-report";
+import { Hero, DropZone, AnalysisJourney } from "@/components/features/landing";
+import { ForensicReport } from "@/components/features/forensics";
 import type { PostcardReport } from "@/src/lib/postcard";
 import { normalizePostUrl } from "@/src/lib/url";
 

@@ -1,173 +1,9 @@
 "use client";
 
 import { motion } from "motion/react";
+import { Cloud, SmallCancelStamp, WaxSeal } from "@/components/illustrations";
 
-function CancelStamp({ className = "" }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 100 100"
-      className={className}
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <circle
-        cx="50"
-        cy="50"
-        r="45"
-        stroke="var(--postal-red)"
-        strokeWidth="2.5"
-      />
-      <circle
-        cx="50"
-        cy="50"
-        r="37"
-        stroke="var(--postal-red)"
-        strokeWidth="1"
-      />
-      <line
-        x1="5"
-        y1="42"
-        x2="95"
-        y2="42"
-        stroke="var(--postal-red)"
-        strokeWidth="2.5"
-      />
-      <line
-        x1="5"
-        y1="50"
-        x2="95"
-        y2="50"
-        stroke="var(--postal-red)"
-        strokeWidth="2.5"
-      />
-      <line
-        x1="5"
-        y1="58"
-        x2="95"
-        y2="58"
-        stroke="var(--postal-red)"
-        strokeWidth="2.5"
-      />
-      <path id="stamp-arc-top" d="M 15,50 A 35,35 0 0,1 85,50" fill="none" />
-      <path id="stamp-arc-bot" d="M 15,50 A 35,35 0 0,0 85,50" fill="none" />
-      <text
-        fontSize="7.5"
-        fill="var(--postal-red)"
-        fontFamily="var(--font-serif), serif"
-        letterSpacing="2"
-      >
-        <textPath href="#stamp-arc-top" startOffset="10%">
-          POSTCARD · FORENSICS
-        </textPath>
-      </text>
-      <text
-        fontSize="7.5"
-        fill="var(--postal-red)"
-        fontFamily="var(--font-serif), serif"
-        letterSpacing="2"
-      >
-        <textPath href="#stamp-arc-bot" startOffset="15%">
-          LAB · EST. 2026 ·
-        </textPath>
-      </text>
-    </svg>
-  );
-}
-
-function WaxSeal() {
-  return (
-    <div className="wax-seal-active flex flex-col items-center gap-1.5">
-      <svg viewBox="0 0 52 52" className="w-12 h-12" fill="none">
-        <circle cx="26" cy="26" r="24" fill="var(--postal-wax)" />
-        <circle
-          cx="26"
-          cy="26"
-          r="20"
-          fill="none"
-          stroke="rgba(244,192,90,0.5)"
-          strokeWidth="1"
-        />
-        {Array.from({ length: 8 }).map((_, i) => {
-          const angle = (i * 360) / 8;
-          const rad = (angle * Math.PI) / 180;
-          const x = 26 + 16 * Math.cos(rad);
-          const y = 26 + 16 * Math.sin(rad);
-          return (
-            <circle key={i} cx={x} cy={y} r="1.2" fill="rgba(244,192,90,0.6)" />
-          );
-        })}
-        <text
-          x="26"
-          y="32"
-          textAnchor="middle"
-          fill="#f4c05a"
-          fontSize="18"
-          fontFamily="var(--font-display), serif"
-          fontWeight="700"
-          fontStyle="italic"
-        >
-          P
-        </text>
-      </svg>
-      <span
-        className="text-[10px] tracking-[0.2em] uppercase"
-        style={{
-          color: "var(--postal-ink-muted)",
-          fontFamily: "var(--font-serif)",
-        }}
-      >
-        Postal Service Active
-      </span>
-    </div>
-  );
-}
-
-function Cloud({
-  cx,
-  cy,
-  scale = 1,
-  driftClass = "cloud-drift",
-}: {
-  cx: number;
-  cy: number;
-  scale?: number;
-  driftClass?: string;
-}) {
-  return (
-    <g
-      transform={`translate(${cx}, ${cy}) scale(${scale})`}
-      style={{
-        animation: `${driftClass} ${12 + scale * 8}s ease-in-out infinite alternate`,
-      }}
-    >
-      <ellipse
-        cx="0"
-        cy="0"
-        rx="38"
-        ry="22"
-        fill="var(--postal-cloud)"
-        opacity="0.92"
-      />
-      <ellipse
-        cx="28"
-        cy="-10"
-        rx="28"
-        ry="18"
-        fill="var(--postal-cloud)"
-        opacity="0.88"
-      />
-      <ellipse
-        cx="-26"
-        cy="-6"
-        rx="22"
-        ry="16"
-        fill="var(--postal-cloud)"
-        opacity="0.88"
-      />
-      <ellipse cx="8" cy="-18" rx="18" ry="14" fill="white" opacity="0.7" />
-    </g>
-  );
-}
+const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 export function Hero() {
   return (
@@ -232,7 +68,7 @@ export function Hero() {
         animate={{ opacity: 0.25, rotate: -15, scale: 1 }}
         transition={{ duration: 0.8, delay: 0.9 }}
       >
-        <CancelStamp className="w-24 h-24" />
+        <SmallCancelStamp className="w-24 h-24" />
       </motion.div>
 
       <div className="relative z-10 flex flex-col items-center pt-16 pb-24 px-6 text-center">
@@ -258,7 +94,7 @@ export function Hero() {
           transition={{
             duration: 0.8,
             delay: 0.15,
-            ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
+            ease: EASE,
           }}
         >
           <h1
