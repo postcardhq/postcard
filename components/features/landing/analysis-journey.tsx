@@ -464,16 +464,34 @@ export function AnalysisJourney({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
               transition={{ duration: 0.4 }}
-              className="px-5 py-3 text-center"
+              className="px-6 py-4 text-center relative overflow-hidden"
               style={{
                 background: "rgba(253,246,227,0.9)",
                 border: "1px solid var(--postal-ink-muted)",
                 backdropFilter: "blur(4px)",
                 borderRadius: 0,
+                minWidth: "220px",
               }}
             >
+              {/* Scanning Beam Animation */}
+              {!error && stage < 4 && (
+                <motion.div
+                  className="absolute top-0 left-0 w-full h-[2px] z-20"
+                  style={{ background: "var(--postal-blue)" }}
+                  animate={{
+                    top: ["0%", "100%", "0%"],
+                    opacity: [0.3, 0.8, 0.3],
+                  }}
+                  transition={{
+                    duration: 2.5,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }}
+                />
+              )}
+
               <p
-                className="text-xs tracking-[0.2em] uppercase mb-0.5"
+                className="text-[10px] tracking-[0.25em] uppercase mb-1"
                 style={{
                   fontFamily: "var(--font-serif)",
                   color: "var(--postal-ink-muted)",
@@ -481,15 +499,34 @@ export function AnalysisJourney({
               >
                 {stageLabel}
               </p>
-              <p
-                className="text-sm italic"
-                style={{
-                  fontFamily: "var(--font-serif)",
-                  color: "var(--postal-ink)",
-                }}
-              >
-                {stageDetail}
-              </p>
+              <div className="flex flex-col items-center gap-1">
+                <p
+                  className="text-sm italic"
+                  style={{
+                    fontFamily: "var(--font-serif)",
+                    color: "var(--postal-ink)",
+                  }}
+                >
+                  {stageDetail}
+                </p>
+                {!error && stage < 4 && (
+                  <div className="flex gap-1.5 mt-1">
+                    {[0, 1, 2].map((i) => (
+                      <motion.div
+                        key={i}
+                        className="w-1.5 h-1.5 rounded-full"
+                        style={{ backgroundColor: "var(--postal-blue)" }}
+                        animate={{ opacity: [0.2, 1, 0.2] }}
+                        transition={{
+                          duration: 1.2,
+                          repeat: Infinity,
+                          delay: i * 0.2,
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

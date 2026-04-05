@@ -19,11 +19,25 @@ const garamond = EB_Garamond({
   weight: ["400", "500", "600"],
 });
 
+import { getBaseUrl } from "@/src/lib/config";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(getBaseUrl()),
   title: "Postcard — Democratizing the truth",
   description:
     "Honesty-as-a-Service: Forensic-grade source verification for the post-truth era.",
 };
+
+import { LandingHook } from "@/components/features/landing";
+import { Footer } from "@/components/ui/footer";
+
+const AIRMAIL_BG = `repeating-linear-gradient(
+  -45deg,
+  var(--postal-red)   0px  8px,
+  var(--postal-paper) 8px 10px,
+  var(--postal-blue) 10px 18px,
+  var(--postal-paper) 18px 20px
+)`;
 
 export default function RootLayout({
   children,
@@ -42,7 +56,17 @@ export default function RootLayout({
         style={{ background: "var(--postal-paper)" }}
       >
         <Navbar />
-        {children}
+        <main className="flex-1">{children}</main>
+
+        {/* Global Branding & Marketing */}
+        <div
+          className="h-2"
+          style={{ backgroundImage: AIRMAIL_BG }}
+          aria-hidden="true"
+        />
+        <LandingHook />
+        <Footer />
+
         <Toaster position="bottom-center" theme="light" />
       </body>
     </html>

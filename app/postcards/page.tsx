@@ -13,6 +13,7 @@ import {
   processPostcardFromUrl,
   incrementPostcardHits,
 } from "@/src/lib/postcard";
+import { getBaseUrl } from "@/src/lib/config";
 import { dbRowToReport } from "@/src/api/conversions";
 import PostcardsClient from "./postcards-client";
 
@@ -47,9 +48,11 @@ const getPostcardsByUrl = cache(
 
 export async function generateMetadata({ searchParams }: Props) {
   const { url: queryUrl } = await searchParams;
+  const baseUrl = getBaseUrl();
 
   if (!queryUrl) {
     return {
+      metadataBase: new URL(baseUrl),
       title: "Postcard — Trace every post back to its source",
       description: "Verify social media posts with AI-powered forensics.",
     };
@@ -82,6 +85,7 @@ export async function generateMetadata({ searchParams }: Props) {
     "Processing";
 
   return {
+    metadataBase: new URL(baseUrl),
     title: `Postcard: ${verdictLabel} (${dbPostcard.postcardScore}/100)`,
     description: dbPostcard.summary || "View the full corroboration trace.",
     openGraph: {

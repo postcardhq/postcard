@@ -7,6 +7,16 @@
 export const DEFAULT_MODEL =
   process.env.GOOGLE_GENERATIVE_AI_MODEL_ID || "gemini-2.0-flash";
 
+/**
+ * Returns the base URL of the application for metadata resolution.
+ * Handles Vercel environment variables and local development.
+ */
+export function getBaseUrl() {
+  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return "http://localhost:3000";
+}
+
 // Grounding Limits
 export const MAX_TOOL_CALLS = parseInt(
   process.env.POSTCARD_MAX_TOOL_CALLS || "5",

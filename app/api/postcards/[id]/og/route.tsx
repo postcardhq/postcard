@@ -4,7 +4,7 @@ import { postcards, posts } from "@/src/db/schema";
 import { eq } from "drizzle-orm";
 import { dbRowToReport } from "@/src/api/conversions";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
 
 export async function GET(
   request: Request,
