@@ -18,6 +18,7 @@
     "@ai-sdk/google": "^3.0.58",
     "@libsql/client": "^0.17.2",
     "@phosphor-icons/react": "^2.1.10",
+    "@scalar/nextjs-api-reference": "^0.10.6",
     "ai": "^6.0.146",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

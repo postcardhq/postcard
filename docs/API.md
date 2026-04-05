@@ -11,46 +11,32 @@ Postcard provides a public REST API for forensic verification of social media po
 https://postcard.fartlabs.org/api/postcards
 ```
 
-## OpenAPI Specification
+## OpenAPI specification
 
-Developers can generate clients using our [OpenAPI JSON Specification](/openapi.json).
+Developers can generate clients using our [OpenAPI JSON specification](/openapi.json).
+
+## Interactive API reference
+
+We provide an interactive API reference powered by [Scalar](https://scalar.com):
+
+- **Local:** Run `npm run dev` and visit `http://localhost:3000/api/reference`
+- **Hosted:** Visit [https://postcard.fartlabs.org/api/reference](https://postcard.fartlabs.org/api/reference)
 
 ## Endpoints
 
-### GET /api/postcards
+### Get /api/postcards
 
 Retrieves the forensic verification result for a given URL.
 
-**Query Parameters:**
-
-| Parameter | Type   | Required | Description                         |
-| :-------- | :----- | :------- | :---------------------------------- |
-| `url`     | string | Yes      | The social media post URL to verify |
+**Query parameters:**
 
 **Headers:**
 
-| Header   | Required | Description                                    |
-| :------- | :------- | :--------------------------------------------- |
-| `Accept` | No       | `application/json` for JSON response (default) |
+**Response codes:**
 
-**Response Codes:**
+**Example request:**
 
-| Code | Description                                                    |
-| :--- | :------------------------------------------------------------- |
-| 200  | Analysis found, JSON response returned                         |
-| 302  | Redirect to UI (when `Accept: application/json` not specified) |
-| 400  | Missing or invalid URL parameter                               |
-| 404  | Analysis not found (initiate new via POST)                     |
-| 500  | Internal server error                                          |
-
-**Example Request:**
-
-```bash
-curl -H "Accept: application/json" \
-  "https://postcard.fartlabs.org/api/postcards?url=https://x.com/user/status/123"
-```
-
-**Example Response:**
+**Example response:**
 
 ```json
 {
@@ -95,7 +81,7 @@ curl -H "Accept: application/json" \
 }
 ```
 
-### POST /api/postcards
+### Post /api/postcards
 
 Submits a new URL for forensic verification. Returns a Server-Sent Events (SSE) stream with progress updates.
 

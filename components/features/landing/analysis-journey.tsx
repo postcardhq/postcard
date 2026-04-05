@@ -11,6 +11,10 @@ const EASE_OUT: [number, number, number, number] = [0.0, 0.0, 0.3, 1.0];
 // Resolved hex — CSS variables are not interpolatable by the browser animation engine.
 const POSTAL_BLUE_HEX = "#2464a0";
 
+// Resolved value used directly in filter — CSS variables are not interpolatable
+// by the browser animation engine, so we use the raw hex here.
+const POSTAL_BLUE_HEX = "#2464a0";
+
 export type AnalysisStage = 0 | 1 | 2 | 3 | 4;
 
 interface StageInfo {

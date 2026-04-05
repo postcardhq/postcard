@@ -3,6 +3,11 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.2-blue)](https://www.typescriptlang.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black)](https://nextjs.org/)
+[![AI SDK](https://img.shields.io/badge/AI_SDK-6.0-black)](https://sdk.vercel.ai/)
+[![Gemini](https://img.shields.io/badge/Gemini-8E75B2?logo=googlegemini&logoColor=white)](https://ai.google.dev/)
+[![Turso](https://img.shields.io/badge/Turso-202020?logo=turso&logoColor=white)](https://turso.tech/)
+[![Drizzle](https://img.shields.io/badge/Drizzle-C5F74F?logo=drizzle&logoColor=000)](https://orm.drizzle.team/)
+[![Playwright](https://img.shields.io/badge/Playwright-2EAD33?logo=playwright&logoColor=white)](https://playwright.dev/)
 
 > _Democratizing the truth._
 
@@ -18,9 +23,6 @@ content has drifted from the ground truth.
 **Track:** [Cybersecurity](https://pantherhacks2026.devpost.com/)\
 **Submission:** [Devpost](https://devpost.com/software/postcard-bpx2mz)\
 **Demo:** [postcard.fartlabs.org](https://postcard.fartlabs.org)\
-**Challenge:** Rebuilding trust in a "post-truth" digital era.\
-**Pitch Script:** [View Video Script](./PITCH.md)\
-**Submission Summary:** [View Summary](./docs/devpost.md)
 
 ## Pipeline architecture
 
