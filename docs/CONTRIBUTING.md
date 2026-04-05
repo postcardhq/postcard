@@ -159,6 +159,10 @@ The project uses AI SDK Skills to enforce industry-standard best practices. Thes
 
 This approach ensures 100% type-safety throughout the forensic pipeline.
 
+- [DESIGN.md](DESIGN.md): Overview of the 4-stage forensic pipeline.
+- [API.md](API.md): Documentation for public endpoints and the Playwright test suite.
+- [TESTING.md](TESTING.md): Manual checklist for verifying pipeline hardening and OG images.
+
 ## Style guide
 
 To maintain a professional and consistent technical narrative, all documentation must follow these standards:

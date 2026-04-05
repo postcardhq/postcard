@@ -28,7 +28,9 @@ test.describe("Postcards API", () => {
     const id = postBody.id;
 
     // 2. Poll via GET - should be 202 initially
-    const getPoll = await request.get(`/api/postcards?url=${encodeURIComponent(testUrl)}`);
+    const getPoll = await request.get(
+      `/api/postcards?url=${encodeURIComponent(testUrl)}`,
+    );
     expect(getPoll.status()).toBe(202);
     const pollBody = await getPoll.json();
     expect(pollBody.status).toBe("processing");
@@ -40,7 +42,9 @@ test.describe("Postcards API", () => {
     const maxRetries = 10;
     for (let i = 0; i < maxRetries; i++) {
       await new Promise((resolve) => setTimeout(resolve, 2000));
-      finalResponse = await request.get(`/api/postcards?url=${encodeURIComponent(testUrl)}`);
+      finalResponse = await request.get(
+        `/api/postcards?url=${encodeURIComponent(testUrl)}`,
+      );
       if (finalResponse.status() === 200) break;
     }
 

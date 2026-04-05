@@ -272,10 +272,13 @@ export async function processPostcardFromUrl(
           .update(postcards)
           .set({
             platform: FAKE_POSTCARD_RESPONSE.platform,
-            postcardScore: Math.floor(FAKE_POSTCARD_RESPONSE.postcardScore * 100),
+            postcardScore: Math.floor(
+              FAKE_POSTCARD_RESPONSE.postcardScore * 100,
+            ),
             verdict: FAKE_POSTCARD_RESPONSE.corroboration.verdict,
             summary: FAKE_POSTCARD_RESPONSE.corroboration.summary,
-            confidenceScore: FAKE_POSTCARD_RESPONSE.corroboration.confidenceScore,
+            confidenceScore:
+              FAKE_POSTCARD_RESPONSE.corroboration.confidenceScore,
             primarySources: JSON.stringify(
               FAKE_POSTCARD_RESPONSE.corroboration.primarySources,
             ),
