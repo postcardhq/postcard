@@ -114,7 +114,7 @@ interface PostcardStatus {
   audit?: unknown;
   corroboration?: unknown;
   timestamp?: string;
-  analysisId?: string;
+  id?: string;
 }
 
 interface AnalysisJourneyProps {
@@ -199,7 +199,7 @@ export function AnalysisJourney({
           corroboration:
             postcardStatus.corroboration as PostcardReport["corroboration"],
           timestamp: postcardStatus.timestamp ?? new Date().toISOString(),
-          analysisId: postcardStatus.analysisId,
+          id: postcardStatus.id,
         };
 
         const hasContent = !!(

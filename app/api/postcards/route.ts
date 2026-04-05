@@ -4,7 +4,7 @@ import {
   PostcardRequestSchema,
   getExistingProcessingPostcard,
   createPostcard,
-  updateAnalysisProgress,
+  updatePostcardRow,
 } from "@/src/lib/postcard";
 import { db } from "@/src/db";
 import { postcards, posts } from "@/src/db/schema";
@@ -74,7 +74,7 @@ function buildReport(existing: PostcardWithPost) {
       ),
     },
     timestamp: postcard.createdAt.toISOString(),
-    analysisId: postcard.id,
+    id: postcard.id,
   };
 }
 
@@ -117,45 +117,45 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const { postcards: analysis } = existing;
+    const { postcards: row } = existing;
 
-    if (analysis.status === "processing") {
+    if (row.status === "processing") {
       return corsResponse(
         {
-          status: analysis.status,
-          stage: analysis.stage,
-          message: analysis.message,
-          progress: analysis.progress,
+          status: row.status,
+          stage: row.stage,
+          message: row.message,
+          progress: row.progress,
         },
         200,
       );
     }
 
-    if (analysis.status === "completed") {
+    if (row.status === "completed") {
       const report = buildReport(existing);
       return corsResponse(
         {
-          status: analysis.status,
+          status: row.status,
           ...report,
         },
         200,
       );
     }
 
-    if (analysis.status === "failed") {
+    if (row.status === "failed") {
       return corsResponse(
         {
-          status: analysis.status,
-          error: analysis.error,
+          status: row.status,
+          error: row.error,
         },
         200,
       );
     }
 
-    return corsResponse({ error: "Unknown analysis status" }, 500);
+    return corsResponse({ error: "Unknown row status" }, 500);
   } catch (error) {
     return corsResponse(
-      { error: error instanceof Error ? error.message : "Analysis failed" },
+      { error: error instanceof Error ? error.message : "Postcard failed" },
       500,
     );
   }
@@ -247,12 +247,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       }
     }
 
-    const { postId, analysisId } = await createPostcard(
-      normalizedUrl,
-      forceRefresh,
-    );
+    const { postId, id } = await createPostcard(normalizedUrl, forceRefresh);
 
-    await updateAnalysisProgress(analysisId, {
+    await updatePostcardRow(id, {
       stage: "scraping",
       message: "Initializing...",
       progress: 0,
@@ -264,19 +261,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       userApiKey,
       (stage, message, progress) => {},
       true,
-      analysisId,
+      id,
     ).catch(async (err) => {
-      await updateAnalysisProgress(analysisId, {
+      await updatePostcardRow(id, {
         status: "failed",
-        error: err instanceof Error ? err.message : "Analysis failed",
+        error: err instanceof Error ? err.message : "Postcard failed",
       });
     });
 
     return corsResponse(
       {
-        postcardId: analysisId,
+        postcardId: id,
         status: "processing",
-        message: "Analysis started",
+        message: "Postcard started",
       },
       202,
     );

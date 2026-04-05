@@ -9,7 +9,7 @@ interface Props {
   searchParams: Promise<{ url?: string; forceRefresh?: string }>;
 }
 
-async function getAnalysisByUrl(url: string) {
+async function getPostcardsRowByUrl(url: string) {
   const normalized = normalizePostUrl(url);
   const result = await db
     .select()
@@ -34,7 +34,7 @@ export async function generateMetadata({ searchParams }: Props) {
   }
 
   const decodedUrl = decodeURIComponent(queryUrl);
-  const data = await getAnalysisByUrl(decodedUrl);
+  const data = await getPostcardsRowByUrl(decodedUrl);
 
   if (!data) {
     const domain = decodedUrl.includes("://")
@@ -46,7 +46,7 @@ export async function generateMetadata({ searchParams }: Props) {
     };
   }
 
-  const { postcards: analysis } = data;
+  const { postcards: row } = data;
   const verdictMap = {
     verified: "✅ Verified",
     disputed: "❌ Disputed",
@@ -55,11 +55,11 @@ export async function generateMetadata({ searchParams }: Props) {
   };
 
   const verdictLabel =
-    verdictMap[analysis.verdict as keyof typeof verdictMap] || analysis.verdict;
+    verdictMap[row.verdict as keyof typeof verdictMap] || row.verdict;
 
   return {
-    title: `Postcard: ${verdictLabel} (${analysis.postcardScore}/100)`,
-    description: analysis.summary || "View the full corroboration trace.",
+    title: `Postcard: ${verdictLabel} (${row.postcardScore}/100)`,
+    description: row.summary || "View the full corroboration trace.",
   };
 }
 
@@ -73,16 +73,16 @@ export default async function PostcardsPage({ searchParams }: Props) {
   let processingUrl = null;
 
   if (normalizedUrl && !forceRefresh) {
-    const data = await getAnalysisByUrl(normalizedUrl);
+    const data = await getPostcardsRowByUrl(normalizedUrl);
     if (data) {
-      const { postcards: analysis, posts: post } = data;
+      const { postcards: row, posts: post } = data;
       const queriesExecuted = JSON.parse(
-        (analysis.queriesExecuted as string) || "[]",
+        (row.queriesExecuted as string) || "[]",
       ) as Array<{ query: string; sourcesFound: number }>;
       initialReport = {
         postcard: {
           platform:
-            (analysis.platform as
+            (row.platform as
               | "X"
               | "YouTube"
               | "Reddit"
@@ -94,34 +94,32 @@ export default async function PostcardsPage({ searchParams }: Props) {
         },
         markdown: post.markdown || "",
         triangulation: {
-          targetUrl: analysis.url,
+          targetUrl: row.url,
           queries: queriesExecuted.map((q) => q.query),
         },
         audit: {
-          originScore: analysis.originScore || 0,
-          temporalScore: analysis.temporalScore || 0,
-          totalScore: analysis.postcardScore / 100,
-          auditLog: JSON.parse((analysis.auditLog as string) || "[]"),
+          originScore: row.originScore || 0,
+          temporalScore: row.temporalScore || 0,
+          totalScore: row.postcardScore / 100,
+          auditLog: JSON.parse((row.auditLog as string) || "[]"),
         },
         corroboration: {
-          primarySources: JSON.parse(
-            (analysis.primarySources as string) || "[]",
-          ),
+          primarySources: JSON.parse((row.primarySources as string) || "[]"),
           queriesExecuted,
           verdict:
-            (analysis.verdict as
+            (row.verdict as
               | "verified"
               | "disputed"
               | "inconclusive"
               | "insufficient_data") || "insufficient_data",
-          summary: analysis.summary || "",
-          confidenceScore: analysis.confidenceScore || 0,
+          summary: row.summary || "",
+          confidenceScore: row.confidenceScore || 0,
           corroborationLog: JSON.parse(
-            (analysis.corroborationLog as string) || "[]",
+            (row.corroborationLog as string) || "[]",
           ),
         },
-        timestamp: analysis.createdAt.toISOString(),
-        analysisId: analysis.id,
+        timestamp: row.createdAt.toISOString(),
+        id: row.id,
       };
     }
   } else if (normalizedUrl && forceRefresh) {

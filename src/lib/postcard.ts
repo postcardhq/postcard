@@ -22,7 +22,7 @@ export interface PipelineStage {
 }
 
 export const PIPELINE_STAGES: PipelineStage[] = [
-  { key: "starting", message: "Initializing analysis...", progress: 0 },
+  { key: "starting", message: "Initializing postcard...", progress: 0 },
   { key: "scraping", message: "Fetching post content...", progress: 0.1 },
   { key: "scraped", message: "Fetched content", progress: 0.3 },
   {
@@ -60,8 +60,8 @@ async function runPipelineStages(
   }
 }
 
-export async function updateAnalysisProgress(
-  analysisId: string,
+export async function updatePostcardRow(
+  id: string,
   updates: {
     stage?: string;
     message?: string;
@@ -76,7 +76,7 @@ export async function updateAnalysisProgress(
       ...updates,
       updatedAt: new Date(),
     })
-    .where(eq(postcards.id, analysisId));
+    .where(eq(postcards.id, id));
 }
 
 export async function getExistingProcessingPostcard(url: string) {
@@ -99,7 +99,7 @@ export async function getExistingProcessingPostcard(url: string) {
 export async function createPostcard(
   url: string,
   forceRefresh?: boolean,
-): Promise<{ postId: string; analysisId: string }> {
+): Promise<{ postId: string; id: string }> {
   const normalized = normalizePostUrl(url);
 
   let pId: string;
@@ -130,11 +130,11 @@ export async function createPostcard(
     status: "processing",
     progress: 0,
     stage: "starting",
-    message: "Initializing analysis...",
+    message: "Initializing postcard...",
     startedAt: new Date(),
   });
 
-  return { postId: pId, analysisId: aId };
+  return { postId: pId, id: aId };
 }
 
 export const PostcardSchema = z.object({
@@ -199,7 +199,7 @@ export const PostcardReportSchema = z.object({
   }),
   corroboration: CorroborationSchema,
   timestamp: z.string().datetime(),
-  analysisId: z.string().optional(),
+  id: z.string().optional(),
 });
 
 export type PostcardReport = z.infer<typeof PostcardReportSchema>;
@@ -219,7 +219,7 @@ export const PostcardResponseSchema = z.object({
   corroboration: CorroborationSchema,
   postcardScore: z.number().min(0).max(1),
   timestamp: z.string().datetime(),
-  analysisId: z.string().optional(),
+  id: z.string().optional(),
   forensicReport: PostcardReportSchema.optional(), // Include full report if requested
 });
 
@@ -273,14 +273,18 @@ export async function processPostcardFromUrl(
   userApiKey?: string,
   onProgress?: ProgressCallback,
   forceRefresh?: boolean,
-  analysisId?: string,
-): Promise<PostcardResponse & { analysisId?: string }> {
+  id?: string,
+): Promise<PostcardResponse & { id?: string }> {
   const normalizedUrl = normalizePostUrl(url);
 
   const updateProgress = async (stage: string, message: string, p: number) => {
     onProgress?.(stage, message, p);
-    if (analysisId) {
-      await updateAnalysisProgress(analysisId, { stage, message, progress: p });
+    if (id) {
+      await updatePostcardRow(id, {
+        stage,
+        message,
+        progress: p,
+      });
     }
   };
 
@@ -302,7 +306,7 @@ export async function processPostcardFromUrl(
     );
 
     if (fail || urlContainsFail) {
-      await updateAnalysisProgress(analysisId!, {
+      await updatePostcardRow(id!, {
         status: "failed",
         error: "Fake failure: External API unavailable",
       });
@@ -314,45 +318,42 @@ export async function processPostcardFromUrl(
 
   try {
     if (!forceRefresh) {
-      const cachedAnalysis = await db
+      const cachedPostcards = await db
         .select()
         .from(postcards)
         .innerJoin(posts, eq(posts.url, normalizedUrl))
         .orderBy(sql`${postcards.createdAt} DESC`)
         .limit(1);
 
-      if (cachedAnalysis.length > 0) {
-        const analysis = cachedAnalysis[0].postcards;
-        if (analysis.status !== "processing") {
+      if (cachedPostcards.length > 0) {
+        const row = cachedPostcards[0].postcards;
+        if (row.status !== "processing") {
           await db
             .update(postcards)
             .set({ hits: sql`${postcards.hits} + 1` })
-            .where(eq(postcards.id, analysis.id));
+            .where(eq(postcards.id, row.id));
         }
 
         return {
           url: normalizedUrl,
-          markdown: cachedAnalysis[0].posts.markdown || "",
-          platform: analysis.platform || "Other",
+          markdown: cachedPostcards[0].posts.markdown || "",
+          platform: row.platform || "Other",
           corroboration: {
-            primarySources: JSON.parse(
-              (analysis.primarySources as string) || "[]",
-            ),
+            primarySources: JSON.parse((row.primarySources as string) || "[]"),
             queriesExecuted: JSON.parse(
-              (analysis.queriesExecuted as string) || "[]",
+              (row.queriesExecuted as string) || "[]",
             ),
             verdict:
-              (analysis.verdict as Corroboration["verdict"]) ||
-              "insufficient_data",
-            summary: (analysis.summary as string) || "",
-            confidenceScore: analysis.confidenceScore || 0,
+              (row.verdict as Corroboration["verdict"]) || "insufficient_data",
+            summary: (row.summary as string) || "",
+            confidenceScore: row.confidenceScore || 0,
             corroborationLog: JSON.parse(
-              (analysis.corroborationLog as string) || "[]",
+              (row.corroborationLog as string) || "[]",
             ),
           },
-          postcardScore: analysis.postcardScore,
-          timestamp: analysis.createdAt.toISOString(),
-          analysisId: analysis.id,
+          postcardScore: row.postcardScore,
+          timestamp: row.createdAt.toISOString(),
+          id: row.id,
         };
       }
     }
@@ -486,15 +487,15 @@ export async function processPostcardFromUrl(
           })
           .where(eq(posts.id, pId));
 
-        // Check for existing analysis to update
-        const existingAnalysis = await db
+        // Check for existing row to update
+        const existingPostcardsRow = await db
           .select()
           .from(postcards)
           .where(eq(postcards.postId, pId))
           .limit(1);
 
-        if (existingAnalysis.length > 0) {
-          aId = existingAnalysis[0].id;
+        if (existingPostcardsRow.length > 0) {
+          aId = existingPostcardsRow[0].id;
           await db
             .update(postcards)
             .set({
@@ -587,7 +588,7 @@ export async function processPostcardFromUrl(
         corroboration,
         postcardScore,
         timestamp: new Date().toISOString(),
-        analysisId: aId,
+        id: aId,
         forensicReport: {
           postcard: {
             platform: platform as Postcard["platform"],
@@ -608,7 +609,7 @@ export async function processPostcardFromUrl(
           },
           corroboration,
           timestamp: new Date().toISOString(),
-          analysisId: aId,
+          id: aId,
         },
       });
     } catch (dbError) {
