@@ -3,6 +3,7 @@ import { db } from "@/src/db";
 import { postcards, posts, PostcardDb } from "@/src/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { normalizePostUrl } from "@/src/lib/url";
+import { createPostcard, processPostcardFromUrl } from "@/src/lib/postcard";
 import PostcardsClient from "./postcards-client";
 
 interface Props {
@@ -20,10 +21,10 @@ async function getPostcardsByUrl(url: string) {
     .limit(1);
 
   if (result.length === 0) return null;
-  const { postcards: dbPostcard, posts: post } = result[0];
+  const { postcards: rawPostcard, posts: rawPost } = result[0];
   return {
-    dbPostcard: PostcardDb.parse(dbPostcard),
-    post: post,
+    postcardRow: PostcardDb.parse(rawPostcard),
+    postRow: rawPost,
   };
 }
 
@@ -50,7 +51,7 @@ export async function generateMetadata({ searchParams }: Props) {
     };
   }
 
-  const dbPostcard = data.dbPostcard;
+  const dbPostcard = data.postcardRow;
   const verdictMap = {
     verified: "✅ Verified",
     disputed: "❌ Disputed",
@@ -81,52 +82,56 @@ export default async function PostcardsPage({ searchParams }: Props) {
     const data = await getPostcardsByUrl(normalizedUrl);
     if (data) {
       const queriesExecuted = JSON.parse(
-        data.dbPostcard.queriesExecuted ?? "[]",
+        data.postcardRow.queriesExecuted ?? "[]",
       );
       initialReport = {
         postcard: {
           platform:
-            (data.dbPostcard.platform as
+            (data.postcardRow.platform as
               | "X"
               | "YouTube"
               | "Reddit"
               | "Instagram"
               | "Other") || "Other",
-          mainText: data.post.mainText || "",
-          username: data.post.username || undefined,
-          timestampText: data.post.timestampText || undefined,
+          mainText: data.postRow.mainText || "",
+          username: data.postRow.username || undefined,
+          timestampText: data.postRow.timestampText || undefined,
         },
-        markdown: data.post.markdown || "",
+        markdown: data.postRow.markdown || "",
         triangulation: {
-          targetUrl: data.dbPostcard.url,
+          targetUrl: data.postcardRow.url,
           queries: queriesExecuted.map((q: { query: string }) => q.query),
         },
         audit: {
-          originScore: data.dbPostcard.originScore ?? 0,
-          temporalScore: data.dbPostcard.temporalScore ?? 0,
-          totalScore: data.dbPostcard.postcardScore / 100,
-          auditLog: JSON.parse(data.dbPostcard.auditLog ?? "[]"),
+          originScore: data.postcardRow.originScore ?? 0,
+          temporalScore: data.postcardRow.temporalScore ?? 0,
+          totalScore: data.postcardRow.postcardScore / 100,
+          auditLog: JSON.parse(data.postcardRow.auditLog ?? "[]"),
         },
         corroboration: {
-          primarySources: JSON.parse(data.dbPostcard.primarySources ?? "[]"),
+          primarySources: JSON.parse(data.postcardRow.primarySources ?? "[]"),
           queriesExecuted,
           verdict:
-            (data.dbPostcard.verdict as
+            (data.postcardRow.verdict as
               | "verified"
               | "disputed"
               | "inconclusive"
               | "insufficient_data") ?? "insufficient_data",
-          summary: data.dbPostcard.summary ?? "",
-          confidenceScore: data.dbPostcard.confidenceScore ?? 0,
+          summary: data.postcardRow.summary ?? "",
+          confidenceScore: data.postcardRow.confidenceScore ?? 0,
           corroborationLog: JSON.parse(
-            data.dbPostcard.corroborationLog ?? "[]",
+            data.postcardRow.corroborationLog ?? "[]",
           ),
         },
-        timestamp: data.dbPostcard.createdAt.toISOString(),
-        id: data.dbPostcard.id,
+        timestamp: data.postcardRow.createdAt.toISOString(),
+        id: data.postcardRow.id,
       };
     }
   } else if (normalizedUrl && forceRefresh) {
+    const { id } = await createPostcard(normalizedUrl);
+    processPostcardFromUrl(normalizedUrl, undefined, () => {}, true, id).catch(
+      console.error,
+    );
     processingUrl = normalizedUrl;
   }
 
