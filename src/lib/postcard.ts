@@ -2,17 +2,32 @@ import { z } from "zod";
 import { db } from "@/db";
 import { analyses, posts } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
-import { preprocessImage } from "./vision/processor";
-import { extractPostcard } from "./vision/ocr";
-import { navigateToSource } from "./agents/navigator";
-import { auditPostcard } from "./agents/verifier";
 import { corroboratePostcard } from "./agents/corroborator";
+import { unifiedPostClient } from "./ingest";
+import { normalizePostUrl } from "./url";
 
 export type ProgressCallback = (
   stage: string,
   message: string,
   progress: number,
 ) => void;
+
+export const PostcardSchema = z.object({
+  username: z.string().optional().describe("User handle (e.g. '@elonmusk')"),
+  timestampText: z
+    .string()
+    .optional()
+    .describe('Relative or absolute post date (e.g. "2h ago")'),
+  platform: z
+    .enum(["X", "YouTube", "Reddit", "Instagram", "Other"])
+    .default("Other"),
+  engagement: z.record(z.string(), z.string()).optional(),
+  mainText: z
+    .string()
+    .describe("Character-for-character extraction of the primary post content"),
+});
+
+export type Postcard = z.infer<typeof PostcardSchema>;
 
 export const CorroborationSchema = z.object({
   primarySources: z.array(
@@ -44,30 +59,9 @@ export const CorroborationSchema = z.object({
 
 export type Corroboration = z.infer<typeof CorroborationSchema>;
 
-export const PostcardDataSchema = z.object({
-  username: z.string().optional(),
-  timestampText: z.string().optional(),
-  platform: z.string(),
-  engagement: z.record(z.string(), z.string()).optional(),
-  mainText: z.string(),
-  uiAnchors: z
-    .array(
-      z.object({
-        element: z.string(),
-        position: z.string(),
-        confidence: z.number(),
-      }),
-    )
-    .optional(),
-});
-
-export type PostcardData = z.infer<typeof PostcardDataSchema>;
-
 export const PostcardReportSchema = z.object({
-  ocr: z.object({
-    markdown: z.string(),
-    postmark: PostcardDataSchema,
-  }),
+  postcard: PostcardSchema,
+  markdown: z.string(), // Added to replace ocr.markdown
   triangulation: z.object({
     targetUrl: z.string().url().optional(),
     queries: z.array(z.string()),
@@ -75,12 +69,12 @@ export const PostcardReportSchema = z.object({
   audit: z.object({
     originScore: z.number(),
     temporalScore: z.number(),
-    visualScore: z.number(),
     totalScore: z.number(),
     auditLog: z.array(z.string()),
   }),
   corroboration: CorroborationSchema,
   timestamp: z.string().datetime(),
+  analysisId: z.string().optional(),
 });
 
 export type PostcardReport = z.infer<typeof PostcardReportSchema>;
@@ -90,6 +84,7 @@ export const PostcardRequestSchema = z
     url: z.string().url().optional(),
     image: z.string().optional(), // base64 encoded image
     userApiKey: z.string().optional(),
+    forceRefresh: z.boolean().optional(),
   })
   .refine((data) => data.url || data.image, {
     message: "Either url or image must be provided",
@@ -104,6 +99,7 @@ export const PostcardResponseSchema = z.object({
   corroboration: CorroborationSchema,
   postcardScore: z.number().min(0).max(1),
   timestamp: z.string().datetime(),
+  analysisId: z.string().optional(),
   forensicReport: PostcardReportSchema.optional(), // Include full report if requested
 });
 
@@ -156,7 +152,9 @@ export async function processPostcardFromUrl(
   url: string,
   userApiKey?: string,
   onProgress?: ProgressCallback,
-): Promise<PostcardResponse> {
+  forceRefresh?: boolean,
+): Promise<PostcardResponse & { analysisId?: string }> {
+  const normalizedUrl = normalizePostUrl(url);
   const progress = (stage: string, message: string, p: number) => {
     onProgress?.(stage, message, p);
   };
@@ -167,287 +165,237 @@ export async function processPostcardFromUrl(
   }
 
   try {
-    const cachedAnalysis = await db
-      .select()
-      .from(analyses)
-      .innerJoin(posts, eq(posts.url, url))
-      .orderBy(sql`${analyses.hits} DESC`)
-      .limit(1);
+    if (!forceRefresh) {
+      const cachedAnalysis = await db
+        .select()
+        .from(analyses)
+        .innerJoin(posts, eq(posts.url, normalizedUrl))
+        .orderBy(sql`${analyses.createdAt} DESC`)
+        .limit(1);
 
-    if (cachedAnalysis.length > 0) {
-      await db
-        .update(analyses)
-        .set({ hits: sql`hits + 1` })
-        .where(eq(analyses.id, cachedAnalysis[0].analyses.id));
+      if (cachedAnalysis.length > 0) {
+        const analysis = cachedAnalysis[0].analyses;
+        await db
+          .update(analyses)
+          .set({ hits: sql`${analyses.hits} + 1` })
+          .where(eq(analyses.id, analysis.id));
 
-      const primarySources = JSON.parse(
-        cachedAnalysis[0].analyses.primarySources || "[]",
-      );
-      const queriesExecuted = JSON.parse(
-        cachedAnalysis[0].analyses.queriesExecuted || "[]",
-      );
-      const corroborationLog = JSON.parse(
-        cachedAnalysis[0].analyses.corroborationLog || "[]",
-      );
+        return {
+          url: normalizedUrl,
+          markdown: cachedAnalysis[0].posts.markdown || "",
+          platform: analysis.platform || "Other",
+          corroboration: {
+            primarySources: JSON.parse(
+              (analysis.primarySources as string) || "[]",
+            ),
+            queriesExecuted: JSON.parse(
+              (analysis.queriesExecuted as string) || "[]",
+            ),
+            verdict:
+              (analysis.verdict as Corroboration["verdict"]) ||
+              "insufficient_data",
+            summary: (analysis.summary as string) || "",
+            confidenceScore: analysis.confidenceScore || 0,
+            corroborationLog: JSON.parse(
+              (analysis.corroborationLog as string) || "[]",
+            ),
+          },
+          postcardScore: analysis.postcardScore,
+          timestamp: analysis.createdAt.toISOString(),
+          analysisId: analysis.id,
+        };
+      }
+    }
 
-      progress("complete", "Cache hit - returning cached analysis", 1);
+    progress("scraping", "Fetching content via UnifiedPostClient...", 0.1);
+    const post = await unifiedPostClient.fetch(url);
+    const markdown = post.markdown;
+
+    if (
+      !markdown ||
+      markdown.length < 50 ||
+      post.platform === "Other" ||
+      markdown.includes("Checking if the site connection is secure")
+    ) {
       return {
-        url: cachedAnalysis[0].posts.url,
-        markdown: cachedAnalysis[0].posts.markdown || "",
-        platform: cachedAnalysis[0].posts.platform || "Other",
+        url,
+        markdown: markdown || "",
+        platform: post.platform || "Other",
         corroboration: {
-          primarySources,
-          queriesExecuted,
-          verdict: (cachedAnalysis[0].analyses.verdict || "inconclusive") as
-            | "verified"
-            | "disputed"
-            | "inconclusive"
-            | "insufficient_data",
-          summary: cachedAnalysis[0].analyses.summary || "",
-          confidenceScore: cachedAnalysis[0].analyses.confidenceScore || 0,
-          corroborationLog,
+          primarySources: [],
+          queriesExecuted: [],
+          verdict: "insufficient_data" as const,
+          summary:
+            "Unable to access this content. The link may require login or may be restricted.",
+          confidenceScore: 0,
+          corroborationLog: [
+            "The platform blocked data ingestion or returned insufficient content.",
+          ],
         },
-        postcardScore: cachedAnalysis[0].analyses.postcardScore,
-        timestamp: cachedAnalysis[0].analyses.createdAt.toISOString(),
+        postcardScore: 0,
+        timestamp: new Date().toISOString(),
       };
     }
-  } catch (cacheError) {
-    console.error("Cache lookup error:", cacheError);
-  }
 
-  progress("scraping", "Fetching content via Jina Reader...", 0.1);
-  const jinaResponse = await fetch(
-    `https://r.jina.ai/${encodeURIComponent(url)}`,
-  );
-  if (!jinaResponse.ok) {
-    throw new Error(`Jina Reader failed: ${jinaResponse.status}`);
-  }
-  const markdown = await jinaResponse.text();
+    progress("scraped", `Fetched ${markdown.length} characters`, 0.3);
 
-  const BLOCKING_PATTERNS = [
-    "log in with facebook",
-    "log in to continue",
-    "sign up to see",
-    "create an account",
-    "this content is not available",
-    "content isn't available",
-    "rate limit",
-    "access denied",
-    "forbidden",
-    "blocked",
-    "oembed error",
-  ];
+    const platform = post.platform;
+    progress("corroborating", "Searching for primary sources...", 0.4);
 
-  const isBlocked = BLOCKING_PATTERNS.some((pattern) =>
-    markdown.toLowerCase().includes(pattern),
-  );
-
-  const isMostlyLoginPage =
-    markdown.toLowerCase().includes("log into instagram") &&
-    (markdown.toLowerCase().includes("mobile number") ||
-      markdown.toLowerCase().includes("password"));
-
-  if (
-    !markdown ||
-    markdown.trim().length < 50 ||
-    isBlocked ||
-    isMostlyLoginPage
-  ) {
-    return {
-      url,
-      markdown: "",
-      platform: inferPlatform(url),
-      corroboration: {
-        primarySources: [],
-        queriesExecuted: [],
-        verdict: "insufficient_data" as const,
-        summary:
-          "Unable to access this content. The link may require login or may be restricted.",
-        confidenceScore: 0,
-        corroborationLog: [
-          isBlocked || isMostlyLoginPage
-            ? "Jina Reader was blocked by the platform."
-            : "Jina Reader returned insufficient content for analysis.",
-        ],
-      },
-      postcardScore: 0,
-      timestamp: new Date().toISOString(),
+    const postcard: Postcard = {
+      platform: platform as Postcard["platform"],
+      username: undefined,
+      timestampText: undefined,
+      mainText: markdown.slice(0, 500),
     };
-  }
 
-  progress("scraped", `Fetched ${markdown.length} characters`, 0.3);
+    const corroboration = await corroboratePostcard(
+      postcard,
+      markdown,
+      (msg: string) => {
+        progress("corroborating", msg, 0.5);
+      },
+    );
 
-  const platform = inferPlatform(url);
-  progress("corroborating", "Searching for primary sources...", 0.4);
+    progress("scoring", "Calculating Postcard score...", 0.9);
 
-  const postcard: import("./vision/ocr").Postcard = {
-    platform: platform as "X" | "YouTube" | "Reddit" | "Instagram" | "Other",
-    username: undefined,
-    timestampText: undefined,
-    mainText: markdown.slice(0, 500),
-  };
+    const postcardScore =
+      0.7 * corroboration.confidenceScore +
+      (0.3 *
+        corroboration.primarySources.filter(
+          (s: { relevance: string }) => s.relevance === "supporting",
+        ).length) /
+        Math.max(corroboration.primarySources.length, 1);
 
-  const corroboration = await corroboratePostcard(
-    postcard,
-    markdown,
-    (msg: string) => {
-      progress("corroborating", msg, 0.5);
-    },
-  );
+    try {
+      const existingPost = await db
+        .select()
+        .from(posts)
+        .where(eq(posts.url, normalizedUrl))
+        .limit(1);
 
-  progress("scoring", "Calculating Postcard score...", 0.9);
+      let pId: string;
+      if (existingPost.length > 0) {
+        pId = existingPost[0].id;
+        // Update the post content just in case it changed
+        await db
+          .update(posts)
+          .set({
+            markdown,
+            mainText: markdown.slice(0, 500),
+            updatedAt: new Date(),
+          })
+          .where(eq(posts.id, pId));
 
-  const postcardScore =
-    0.7 * corroboration.confidenceScore +
-    (0.3 *
-      corroboration.primarySources.filter(
-        (s: { relevance: string }) => s.relevance === "supporting",
-      ).length) /
-      Math.max(corroboration.primarySources.length, 1);
+        // Check for existing analysis to update
+        const existingAnalysis = await db
+          .select()
+          .from(analyses)
+          .where(eq(analyses.postId, pId))
+          .limit(1);
 
-  try {
-    const existingPost = await db
-      .select()
-      .from(posts)
-      .where(eq(posts.url, url))
-      .limit(1);
+        if (existingAnalysis.length > 0) {
+          await db
+            .update(analyses)
+            .set({
+              postcardScore,
+              originScore: 0.5,
+              corroborationScore: corroboration.confidenceScore,
+              biasScore: 0.5,
+              temporalScore: 0.5,
+              verdict: corroboration.verdict,
+              summary: corroboration.summary,
+              confidenceScore: corroboration.confidenceScore,
+              primarySources: JSON.stringify(corroboration.primarySources),
+              queriesExecuted: JSON.stringify(corroboration.queriesExecuted),
+              corroborationLog: JSON.stringify(corroboration.corroborationLog),
+              status: "completed",
+              updatedAt: new Date(),
+              createdAt: new Date(), // Reset creation time on full re-eval
+            })
+            .where(eq(analyses.id, existingAnalysis[0].id));
+        } else {
+          await db.insert(analyses).values({
+            id: crypto.randomUUID(),
+            postId: pId,
+            url: normalizedUrl,
+            platform,
+            postcardScore,
+            originScore: 0.5,
+            corroborationScore: corroboration.confidenceScore,
+            biasScore: 0.5,
+            temporalScore: 0.5,
+            verdict: corroboration.verdict,
+            summary: corroboration.summary,
+            confidenceScore: corroboration.confidenceScore,
+            primarySources: JSON.stringify(corroboration.primarySources),
+            queriesExecuted: JSON.stringify(corroboration.queriesExecuted),
+            corroborationLog: JSON.stringify(corroboration.corroborationLog),
+            status: "completed",
+          });
+        }
+      } else {
+        pId = crypto.randomUUID();
+        await db.insert(posts).values({
+          id: pId,
+          url: normalizedUrl,
+          platform,
+          markdown,
+          mainText: markdown.slice(0, 500),
+        });
 
-    if (existingPost.length > 0) {
-      await db
-        .update(analyses)
-        .set({ hits: sql`hits + 1` })
-        .where(eq(analyses.postId, existingPost[0].id));
-    } else {
-      const postId = crypto.randomUUID();
-      await db.insert(posts).values({
-        id: postId,
-        url,
-        platform,
+        await db.insert(analyses).values({
+          id: crypto.randomUUID(),
+          postId: pId,
+          url: normalizedUrl,
+          platform,
+          postcardScore,
+          originScore: 0.5,
+          corroborationScore: corroboration.confidenceScore,
+          biasScore: 0.5,
+          temporalScore: 0.5,
+          verdict: corroboration.verdict,
+          summary: corroboration.summary,
+          confidenceScore: corroboration.confidenceScore,
+          primarySources: JSON.stringify(corroboration.primarySources),
+          queriesExecuted: JSON.stringify(corroboration.queriesExecuted),
+          corroborationLog: JSON.stringify(corroboration.corroborationLog),
+          status: "completed",
+        });
+      }
+      const aId = (
+        await db
+          .select()
+          .from(analyses)
+          .where(eq(analyses.postId, pId))
+          .limit(1)
+      )[0]?.id;
+
+      progress("complete", "Postcard complete", 1);
+
+      return PostcardResponseSchema.parse({
+        url: normalizedUrl,
         markdown,
-        mainText: markdown.slice(0, 500),
-      });
-
-      await db.insert(analyses).values({
-        id: crypto.randomUUID(),
-        postId,
-        url,
         platform,
+        corroboration,
         postcardScore,
-        originScore: 0.5,
-        corroborationScore: corroboration.confidenceScore,
-        biasScore: 0.5,
-        temporalScore: 0.5,
-        verdict: corroboration.verdict,
-        summary: corroboration.summary,
-        confidenceScore: corroboration.confidenceScore,
-        primarySources: JSON.stringify(corroboration.primarySources),
-        queriesExecuted: JSON.stringify(corroboration.queriesExecuted),
-        corroborationLog: JSON.stringify(corroboration.corroborationLog),
-        status: "completed",
+        timestamp: new Date().toISOString(),
+        analysisId: aId,
       });
+    } catch (dbError) {
+      console.error("Database error:", dbError);
     }
-  } catch (dbError) {
-    console.error("Database error:", dbError);
-  }
 
-  progress("complete", "Postcard complete", 1);
-
-  return PostcardResponseSchema.parse({
-    url,
-    markdown,
-    platform,
-    corroboration,
-    postcardScore,
-    timestamp: new Date().toISOString(),
-  });
-}
-
-function inferPlatform(url: string): string {
-  const hostname = new URL(url).hostname.toLowerCase();
-  if (hostname.includes("x.com") || hostname.includes("twitter.com"))
-    return "X";
-  if (hostname.includes("youtube.com")) return "YouTube";
-  if (hostname.includes("reddit.com")) return "Reddit";
-  if (hostname.includes("instagram.com")) return "Instagram";
-  return "Other";
-}
-
-export async function processPostcardFromImage(
-  imageBuffer: Buffer,
-  mimeType: string = "image/png",
-): Promise<PostcardReport> {
-  if (process.env.NEXT_PUBLIC_FAKE_PIPELINE === "true") {
-    return {
-      ocr: {
-        markdown:
-          "## @YeOldeTweeter\n**Breaking: local man discovers that water is, in fact, wet.**\n*14h ago · 3.2K Retweets · 21.4K Likes*",
-        postmark: {
-          username: "@YeOldeTweeter",
-          timestampText: "14h ago",
-          platform: "X",
-          engagement: { likes: "21.4K", retweets: "3.2K", views: "812K" },
-          mainText:
-            "Breaking: local man discovers that water is, in fact, wet.",
-        },
-      },
-      triangulation: {
-        targetUrl: "https://x.com/YeOldeTweeter/status/1800000000000000001",
-        queries: [
-          'site:x.com @YeOldeTweeter "water is wet" 14h ago',
-          'YeOldeTweeter "local man discovers" tweet X',
-        ],
-      },
-      audit: {
-        originScore: 1,
-        temporalScore: 0.9,
-        visualScore: 0.9,
-        totalScore: 0.94,
-        auditLog: [
-          "[MOCK] Starting audit for URL: https://x.com/YeOldeTweeter/status/1800000000000000001",
-          "[MOCK] URL verified: Direct match found.",
-          "[MOCK] Temporal match: Timestamp consistent with live page content.",
-          "[MOCK] Visual consistency: UI fingerprints align with X platform template.",
-        ],
-      },
-      corroboration: MOCK_POSTCARD_RESPONSE.corroboration,
+    return PostcardResponseSchema.parse({
+      url,
+      markdown,
+      platform,
+      corroboration,
+      postcardScore,
       timestamp: new Date().toISOString(),
-    };
+    });
+  } catch (error) {
+    console.error("Trace error:", error);
+    throw error;
   }
-
-  const processed = await preprocessImage(imageBuffer, {
-    contrast: 1.2,
-    sharpen: true,
-  });
-
-  const ocr = await extractPostcard(processed, mimeType);
-
-  await new Promise((resolve) => setTimeout(resolve, 2000));
-
-  const { url: targetUrl, queries } = await navigateToSource(
-    ocr.postcard,
-    ocr.markdown,
-  );
-
-  const audit = targetUrl
-    ? await auditPostcard(targetUrl, ocr.postcard)
-    : {
-        originScore: 0,
-        temporalScore: 0,
-        visualScore: 0,
-        totalScore: 0,
-        auditLog: ["Skipping audit: No target URL identified by navigator."],
-      };
-
-  const corroboration = await corroboratePostcard(ocr.postcard, ocr.markdown);
-
-  return PostcardReportSchema.parse({
-    ocr: {
-      markdown: ocr.markdown,
-      postmark: ocr.postcard,
-    },
-    triangulation: { targetUrl, queries },
-    audit,
-    corroboration,
-    timestamp: new Date().toISOString(),
-  });
 }

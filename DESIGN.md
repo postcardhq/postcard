@@ -1,4 +1,4 @@
-# Postcard technical design
+# Postcard design spec
 
 > **Team:** [Ethan](https://github.com/EthanThatOneKid), [Yves](https://github.com/hallowsyves)  
 > **Event:** [PantherHacks 2026](https://pantherhacks2026.devpost.com/) (April 3–5, 2026)  
@@ -19,38 +19,45 @@ Screenshots strip context. Cropped text, missing timestamps, and altered engagem
 - Wayback Machine historical lookups (deferred for MVP).
 - Mobile application (web-first for hackathon).
 
-## Technical architecture
+## Architecture
 
 Postcard operates as a forensic pipeline designed to audit social media content. While the system supports screenshot-to-URL resolution, the primary focus is the **URL-based entrypoint**, where users submit a direct post URL for deep forensic verification.
 
-### Forensic pipeline (URL entrypoint)
+### Forensic pipeline
 
 1. **URL Entrypoint:** Users submit the direct source URL for forensic verification.
-2. **Multimodal Ingest:** Jina Reader fetches the live content to establish ground truth.
-3. **Forensic Audit:** Playwright and direct site checks verify origin and temporal alignment.
+2. **Strategy-Based Ingest:** A platform-aware `UnifiedPostStrategy` delegates to specialized **UnifiedPostClients** (Reddit, YouTube oEmbed) or Jina Reader for high-fidelity data retrieval.
+3. **Forensic Audit:** Validation of origin, temporal alignment, and engagement consistency using live metadata.
 4. **Corroboration:** Deep search across trusted domains (X, Reddit, News) to verify claims.
 
-### Pipeline stages
+### Stages
 
-#### Stage 1: preprocessor
+#### Preprocessor
 
 The preprocessor uses **sharp** to normalize contrast, adjust brightness, and sharpen the image. This optimization ensures high-quality OCR results during resolution.
 
-#### Stage 2: OCR and platform inference
+#### Inference
 
 Gemini 2.5/3+ analyzes the processed image to extract structured metadata and **infer the social media platform** (X, YouTube, Reddit, Instagram, or 'Other'). This inference is critical for direct search dorking.
 
-#### Stage 3: navigator agent
+#### Navigator
 
 The navigator agent triangulates the source URL using OCR metadata and platform clues. It generates targeted search queries and prioritizes primary sources over aggregators.
 
-**Content Ingestion (Jina Reader):** Once a URL is provided (or resolved), the system uses the **Jina Reader API** (`https://r.jina.ai/<url>`) to ingest the **live metadata** (exact like counts, character-by-character text, absolute timestamps). This serves as the "ground truth" for the forensic audit.
+**Content Ingestion (UnifiedPost Strategy):** To ensure maximum reliability and bypass common "login required" blocks, Postcard uses a **Strategy Pattern** for data ingestion. The system inspects the URL and delegates to the most robust **UnifiedPostClient**:
 
-#### Stage 4: forensic auditor
+- **Reddit Strategy:** Uses the native `.json` endpoint for character-perfect markdown.
+- **YouTube Strategy:** Uses oEmbed for video metadata and shadow scrapers for community posts.
+- **Social oEmbed (X, TikTok, Instagram):** Leverages official oEmbed APIs to capture high-fidelity metadata (author names, absolute timestamps) even when direct scraping is blocked.
+- **Jina Fallback:** Acts as a high-fidelity markdown scraper for general websites.
+
+This stage produces a **UnifiedPost** object, standardizing the "ground truth" for the forensic audit. When ingestion is blocked by a platform, the UI provides transparency by displaying the raw markdown retrieved during the attempt.
+
+#### Auditor
 
 Playwright scrapes the live URL to compute the final forensic subscores. Using an allowlist of trusted domains, the auditor performs **Google Dorking** to identify primary sources (news articles, official statements, repository logs) that verify or refute the post's content.
 
-## Database and caching
+## Database / Caching
 
 Postcard uses **Drizzle ORM** with **Turso/libSQL** for type-safe server-side caching and forensic log storage.
 
@@ -62,7 +69,7 @@ Postcard caches forensic results at the **Resolved Post URL** level.
 - **Cache Hit:** Increment the `hits` count on the associated `analysis`. Serve cached forensic data and the postcard score.
 - **Cache Miss:** Scrape via Jina Reader, perform full corroboration, and persist a new forensic record.
 
-## The postcard score model
+## Score logic
 
 The system combines subscores into a weighted percentage (0–100%) to provide a high-fidelity forensic verdict.
 
@@ -84,7 +91,7 @@ const TotalScore =
   T * WEIGHTS.TEMPORAL;
 ```
 
-## REST API architecture
+## API spec
 
 Postcard follows **Google AIP-121** (Resource-Oriented Design) and **AIP-122** (Standard Methods).
 

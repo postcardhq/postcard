@@ -9,7 +9,9 @@
     "lint": "eslint src app components",
     "type-check": "tsc --noEmit",
     "check": "npm run lint && npm run type-check",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.58",
