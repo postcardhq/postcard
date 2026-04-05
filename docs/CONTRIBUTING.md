@@ -19,7 +19,14 @@ To set up the development environment, perform the following steps:
     npm install
     ```
 
-3.  Configure environment variables:
+3.  **Install Playwright browsers:**
+    Postcard requires specifically configured browser binaries for forensic scraping:
+
+    ```bash
+    npx playwright install
+    ```
+
+4.  **Configure environment variables:**
     Copy the template to create your local environment file:
 
     ```bash
@@ -28,23 +35,45 @@ To set up the development environment, perform the following steps:
 
     Edit `.env` to include your `GOOGLE_GENERATIVE_AI_API_KEY` if you plan to use the live pipeline.
 
-4.  **Initialize the database:**
+5.  **Initialize the database:**
     Sync the schema to your local SQLite file:
 
     ```bash
     npm run db:push
     ```
 
-5.  **Verify the environment:**
+    You can inspect your local forensic audit logs visually at any time using:
+
+    ```bash
+    npm run db:studio
+    ```
+
+6.  **Verify the environment:\*\***
 
     ```bash
     npm run check  # Run linting and type-checks
     ```
 
-6.  **Start the development server:**
+7.  **Start the development server:**
     ```bash
     npm run dev
     ```
+
+## Testing
+
+Postcard includes a comprehensive test suite for verifying ingestion strategies and forensic pipelines.
+
+- **Run all tests:** `npm run test`
+- **Run in UI mode:** `npx playwright test --ui`
+
+The test suite automatically utilizes the `fake` project configuration to ensure consistent results without consuming AI API credits during local verification.
+
+## Documentation
+
+- **Hosted Docs:** [Mintlify](https://www.mintlify.com/postcardhq/postcard)
+- **OpenAPI:** [openapi.json](../public/openapi.json)
+
+When contributing new features, ensure that the corresponding documentation is updated in the `docs/` folder and that any API changes are reflected in the OpenAPI specification.
 
 ## Configuration
 

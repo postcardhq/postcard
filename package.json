@@ -11,7 +11,8 @@
     "check": "npm run lint && npm run type-check",
     "format": "prettier --write .",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "test": "playwright test"
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.58",
