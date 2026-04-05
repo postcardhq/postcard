@@ -19,23 +19,21 @@ const AIRMAIL_BG = `repeating-linear-gradient(
 export default function Home() {
   return (
     <main>
-      {/* ── Hook section: quote + feature cards ── */}
       <LandingHook />
 
-      {/* ── Airmail divider ── */}
       <div
         className="h-2"
         style={{ backgroundImage: AIRMAIL_BG }}
         aria-hidden="true"
       />
 
-      {/* ── Call to action ── */}
       <section
         aria-label="Get started"
         className="px-6"
         style={{ background: "var(--postal-paper)" }}
       >
         <motion.div
+          data-motion
           className="mx-auto max-w-xl py-20 flex flex-col items-center gap-6 text-center"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -61,7 +59,7 @@ export default function Home() {
           >
             Every screenshot tells a story.
             <br />
-            Let&rsquo;s find out if it&rsquo;s true.
+            Let&apos;s find out if it&apos;s true.
           </p>
 
           <Link
@@ -80,7 +78,6 @@ export default function Home() {
         </motion.div>
       </section>
 
-      {/* ── Footer ── */}
       <Footer />
     </main>
   );

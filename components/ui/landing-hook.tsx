@@ -34,8 +34,8 @@ export function LandingHook() {
       }}
     >
       <div className="mx-auto max-w-3xl px-6 py-16">
-        {/* Eyebrow */}
         <motion.p
+          data-motion
           className="text-[11px] tracking-[0.3em] uppercase mb-5"
           style={{
             fontFamily: "var(--font-serif)",
@@ -48,8 +48,8 @@ export function LandingHook() {
           Why It Matters
         </motion.p>
 
-        {/* Main hook */}
         <motion.blockquote
+          data-motion
           className="mb-6"
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
@@ -69,8 +69,8 @@ export function LandingHook() {
           </p>
         </motion.blockquote>
 
-        {/* Sub-hook */}
         <motion.p
+          data-motion
           className="text-base leading-relaxed mb-12"
           style={{
             fontFamily: "var(--font-serif)",
@@ -91,8 +91,8 @@ export function LandingHook() {
           </span>
         </motion.p>
 
-        {/* Feature grid — gap-px trick for hairline grid lines */}
         <motion.div
+          data-motion
           className="grid grid-cols-1 md:grid-cols-3"
           style={{
             border: "1px solid var(--postal-ink-faint)",
