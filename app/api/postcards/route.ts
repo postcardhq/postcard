@@ -19,6 +19,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const parsed = PostcardRequestSchema.safeParse(body);
   if (!parsed.success) {
+    console.error("Postcard request validation failed:", parsed.error.format());
     return NextResponse.json(
       { error: "Invalid request.", details: parsed.error.flatten() },
       { status: 400 },

@@ -32,10 +32,12 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={cn("h-full antialiased", playfair.variable, garamond.variable)}
     >
       <body
         className="min-h-full flex flex-col"
+        suppressHydrationWarning
         style={{ background: "var(--postal-paper)" }}
       >
         <Navbar />

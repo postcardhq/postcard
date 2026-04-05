@@ -276,6 +276,19 @@ export function AnalysisJourney({
   }, [onComplete]);
 
   useEffect(() => {
+    // Dynamically update document title based on forensic progress
+    const originalTitle = document.title;
+    if (error) {
+      document.title = "Analysis Failed | Postcard";
+    } else {
+      document.title = `${stageLabel} | Postcard`;
+    }
+    return () => {
+      document.title = originalTitle;
+    };
+  }, [stageLabel, error]);
+
+  useEffect(() => {
     fetchReportWithProgress(
       postUrl,
       (progress) => {

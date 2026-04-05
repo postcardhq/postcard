@@ -19,7 +19,6 @@ export function Navbar() {
       }}
     >
       <div className="mx-auto max-w-5xl px-6 h-14 flex items-center justify-between">
-
         {/* Logo */}
         <Link
           href="/"
@@ -44,7 +43,7 @@ export function Navbar() {
 
         {/* Nav */}
         <nav aria-label="Primary">
-          <a
+          <Link
             href="/#why-it-matters"
             className="inline-flex items-center min-h-[44px] px-3 text-[11px] tracking-[0.22em] uppercase"
             style={{
@@ -53,9 +52,8 @@ export function Navbar() {
             }}
           >
             Why It Matters
-          </a>
+          </Link>
         </nav>
-
       </div>
     </header>
   );

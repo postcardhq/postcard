@@ -3,19 +3,12 @@ import type { UnifiedPostClient, UnifiedPost } from "./types";
 export class InstagramPostClient implements UnifiedPostClient {
   canHandle(url: string): boolean {
     const hostname = new URL(url).hostname.toLowerCase();
-    return hostname.includes("instagram.com");
+    const hasToken = !!process.env.INSTAGRAM_ACCESS_TOKEN;
+    return hostname.includes("instagram.com") && hasToken;
   }
 
   async fetch(url: string): Promise<UnifiedPost> {
-    const accessToken = process.env.INSTAGRAM_ACCESS_TOKEN;
-
-    if (!accessToken) {
-      // Instagram oEmbed requires a Meta App access token.
-      // If missing, we throw to trigger the Jina fallback.
-      throw new Error(
-        "Instagram oEmbed requires a Meta 'access_token'. Falling back to Jina Reader.",
-      );
-    }
+    const accessToken = process.env.INSTAGRAM_ACCESS_TOKEN!;
 
     const oembedUrl = `https://graph.facebook.com/v16.0/instagram_oembed?url=${encodeURIComponent(url)}&access_token=${accessToken}`;
     const response = await fetch(oembedUrl);

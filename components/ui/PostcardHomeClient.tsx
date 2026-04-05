@@ -46,8 +46,8 @@ export default function PostcardHomeClient({
   const handleUrlSubmitted = useCallback(
     (url: string) => {
       const normalized = normalizePostUrl(url);
-      // Hard redirect to the new "One Right Way" URL
-      router.push(`/${normalized}`);
+      // Use search param for robust URL handling
+      router.push(`/?url=${encodeURIComponent(normalized)}`);
     },
     [router],
   );

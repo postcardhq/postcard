@@ -9,6 +9,7 @@ import type { Metadata } from "next";
 
 interface Props {
   params: Promise<{ slug?: string[] }>;
+  searchParams: Promise<{ url?: string; forceRefresh?: string }>;
 }
 
 async function getAnalysisByUrl(url: string) {
@@ -25,22 +26,29 @@ async function getAnalysisByUrl(url: string) {
   return result[0];
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+  searchParams,
+}: Props): Promise<Metadata> {
   const { slug } = await params;
-  if (!slug || slug.length === 0) {
+  const { url: queryUrl } = await searchParams;
+
+  const decodedUrl = queryUrl ? decodeURIComponent(queryUrl) : null;
+  const url = decodedUrl || (slug ? reconstructUrlFromSlug(slug) : "");
+
+  if (!url) {
     return {
       title: "Postcard: Social Media Forensics",
       description: "Verify the origin and truth of viral social media posts.",
     };
   }
-
-  const url = reconstructUrlFromSlug(slug);
   const data = await getAnalysisByUrl(url);
 
   if (!data) {
+    const domain = url.includes("://") ? url.split("://")[1].split("/")[0] : "";
     return {
-      title: "Trimming Postcard...",
-      description: "Initializing forensic trace for " + url,
+      title: domain ? `Tracing ${domain} Post...` : "Tracing Postcard...",
+      description: `Initializing forensic trace for content from ${domain || "social media"}.`,
     };
   }
 
@@ -61,9 +69,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function Page({ params }: Props) {
+export default async function Page({ params, searchParams }: Props) {
   const { slug } = await params;
-  const initialUrl = slug ? reconstructUrlFromSlug(slug) : null;
+  const { url: queryUrl } = await searchParams;
+
+  // Prioritize direct search param over URL-in-path slug
+  const decodedUrl = queryUrl ? decodeURIComponent(queryUrl) : null;
+  const initialUrl = decodedUrl || (slug ? reconstructUrlFromSlug(slug) : null);
   const normalizedUrl = initialUrl ? normalizePostUrl(initialUrl) : null;
 
   let initialReport: PostcardReport | null = null;

@@ -12,6 +12,42 @@
 **Challenge:** Rebuilding trust in a "post-truth" digital era.  
 **Pitch Script:** [View Video Script](./PITCH.md)
 
+## Pipeline architecture
+
+```mermaid
+sequenceDiagram
+    participant U as Frontend (AnalysisJourney)
+    participant API as API Route (/api/postcards)
+    participant P as Forensic Pipeline
+    participant I as Unified Ingest (oEmbed/Jina)
+    participant A as Corroborator Agent (Gemini)
+    participant DB as Database (Turso)
+
+    U->>API: POST { url: "https://x.com/..." }
+    API-->>U: HTTP 200 (SSE Stream Started)
+
+    API->>P: processPostcardFromUrl(url)
+    P->>DB: Check cached analysis
+    alt Cache Hit
+        DB-->>P: Return cached report
+    else Cache Miss
+        P->>I: fetch(url)
+        I-->>P: High-fidelity Markdown
+        P->>U: SSE Event: Progress ("Scraping complete")
+
+        P->>A: corroboratePostcard(content)
+        A-->>P: Independent Evidence & Verdict
+        P->>U: SSE Event: Progress ("Corroboration complete")
+
+        P->>P: Calculate Postcard Score
+        P->>DB: Persist new analysis
+    end
+
+    P-->>API: Final Postcard Report
+    API->>U: SSE Event: Complete { report }
+    API-->>U: Close Stream
+```
+
 ## Flow
 
 **User flow:** Enter Post URL → Forensic Pipeline Runs → Postcard Score + Subscore Breakdown appears.
@@ -36,6 +72,10 @@ We built a 4-stage forensic pipeline focused on deep audit log generation and co
 2. **Multimodal Ingest:** Jina Reader ingests live content to establish ground truth.
 3. **Forensic Audit:** Playwright and direct site checks verify origin and temporal alignment.
 4. **Corroboration:** Deep search across trusted domains (X, Reddit, News) to verify claims.
+
+## Lessons learned
+
+A key technical takeaway from this hackathon was discovering **how oEmbed APIs can significantly enhance verifiable OSINT**. While traditional scraping is often blocked or inconsistent, leveraging official oEmbed endpoints (like those from X, Instagram, and YouTube) provides a reliable, high-fidelity way to capture metadata—such as author information and exact timestamps—directly from the source without the fragility of manual extraction.
 
 ## Documentation
 
