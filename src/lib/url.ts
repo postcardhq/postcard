@@ -27,7 +27,14 @@ export function normalizePostUrl(url: string): string {
 
     // Strip common social tracking parameters
     const searchParams = new URLSearchParams(urlObj.search);
-    const trackingParams = ["s", "t", "ref", "ref_src", "ref_url", "utm_source"];
+    const trackingParams = [
+      "s",
+      "t",
+      "ref",
+      "ref_src",
+      "ref_url",
+      "utm_source",
+    ];
     trackingParams.forEach((p) => searchParams.delete(p));
 
     const search = searchParams.toString();

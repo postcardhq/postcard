@@ -53,8 +53,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 
   const verdictLabel =
-    verdictMap[analysis.verdict as keyof typeof verdictMap] ||
-    analysis.verdict;
+    verdictMap[analysis.verdict as keyof typeof verdictMap] || analysis.verdict;
 
   return {
     title: `Postcard: ${verdictLabel} (${analysis.postcardScore}/100)`,
@@ -66,16 +65,22 @@ export default async function Page({ params }: Props) {
   const { slug } = await params;
   const initialUrl = slug ? reconstructUrlFromSlug(slug) : null;
   const normalizedUrl = initialUrl ? normalizePostUrl(initialUrl) : null;
-  
+
   let initialReport: PostcardReport | null = null;
-  
+
   if (normalizedUrl) {
     const data = await getAnalysisByUrl(normalizedUrl);
     if (data) {
       const { analyses: analysis, posts: post } = data;
       initialReport = {
         postcard: {
-          platform: (analysis.platform as "X" | "YouTube" | "Reddit" | "Instagram" | "Other") || "Other",
+          platform:
+            (analysis.platform as
+              | "X"
+              | "YouTube"
+              | "Reddit"
+              | "Instagram"
+              | "Other") || "Other",
           mainText: post.mainText || "",
           username: post.username || undefined,
           timestampText: post.timestampText || undefined,
@@ -92,12 +97,20 @@ export default async function Page({ params }: Props) {
           auditLog: JSON.parse((analysis.auditLog as string) || "[]"),
         },
         corroboration: {
-          primarySources: JSON.parse((analysis.primarySources as string) || "[]"),
-          queriesExecuted: JSON.parse((analysis.queriesExecuted as string) || "[]"),
-          verdict: (analysis.verdict as Corroboration["verdict"]) || "insufficient_data",
+          primarySources: JSON.parse(
+            (analysis.primarySources as string) || "[]",
+          ),
+          queriesExecuted: JSON.parse(
+            (analysis.queriesExecuted as string) || "[]",
+          ),
+          verdict:
+            (analysis.verdict as Corroboration["verdict"]) ||
+            "insufficient_data",
           summary: analysis.summary || "",
           confidenceScore: analysis.confidenceScore || 0,
-          corroborationLog: JSON.parse((analysis.corroborationLog as string) || "[]"),
+          corroborationLog: JSON.parse(
+            (analysis.corroborationLog as string) || "[]",
+          ),
         },
         timestamp: analysis.createdAt.toISOString(),
         analysisId: analysis.id,
@@ -107,9 +120,9 @@ export default async function Page({ params }: Props) {
 
   return (
     <Suspense fallback={<div>Loading Forensic Core...</div>}>
-      <PostcardHomeClient 
-        initialUrl={normalizedUrl} 
-        initialReport={initialReport} 
+      <PostcardHomeClient
+        initialUrl={normalizedUrl}
+        initialReport={initialReport}
       />
     </Suspense>
   );

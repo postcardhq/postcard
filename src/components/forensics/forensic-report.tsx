@@ -311,8 +311,12 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
                 <div
                   className="flex items-center gap-2 px-4 py-2 text-[10px] tracking-widest uppercase font-bold transition-all duration-300 group-hover:scale-105"
                   style={{
-                    background: copied ? "var(--postal-blue)" : "var(--postal-paper)",
-                    color: copied ? "var(--postal-paper)" : "var(--postal-blue)",
+                    background: copied
+                      ? "var(--postal-blue)"
+                      : "var(--postal-paper)",
+                    color: copied
+                      ? "var(--postal-paper)"
+                      : "var(--postal-blue)",
                     border: "1px solid var(--postal-blue)",
                   }}
                 >

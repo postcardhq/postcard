@@ -16,8 +16,13 @@ interface Props {
 
 type PageStage = "upload" | "analyzing" | "results";
 
-export default function PostcardHomeClient({ initialUrl, initialReport }: Props) {
-  const [pageStage, setPageStage] = useState<PageStage>(initialUrl ? (initialReport ? "results" : "analyzing") : "upload");
+export default function PostcardHomeClient({
+  initialUrl,
+  initialReport,
+}: Props) {
+  const [pageStage, setPageStage] = useState<PageStage>(
+    initialUrl ? (initialReport ? "results" : "analyzing") : "upload",
+  );
   const [postUrl] = useState<string | null>(initialUrl);
   const [report, setReport] = useState<PostcardReport | null>(initialReport);
   const [forceRefresh, setForceRefresh] = useState(false);
@@ -38,11 +43,14 @@ export default function PostcardHomeClient({ initialUrl, initialReport }: Props)
     }
   }, [searchParams, router]);
 
-  const handleUrlSubmitted = useCallback((url: string) => {
-    const normalized = normalizePostUrl(url);
-    // Hard redirect to the new "One Right Way" URL
-    router.push(`/${normalized}`);
-  }, [router]);
+  const handleUrlSubmitted = useCallback(
+    (url: string) => {
+      const normalized = normalizePostUrl(url);
+      // Hard redirect to the new "One Right Way" URL
+      router.push(`/${normalized}`);
+    },
+    [router],
+  );
 
   const handleReportReady = useCallback((r: PostcardReport) => {
     setReport(r);
