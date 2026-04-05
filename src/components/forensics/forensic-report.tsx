@@ -5,7 +5,7 @@ import { motion } from "motion/react";
 import {
   Clock,
   Fingerprint,
-  MapTrifold,
+  MapPin,
   MagnifyingGlass,
   ShieldCheck,
   ArrowRight,
@@ -358,7 +358,7 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
 
           <TimelineNode
             icon={
-              <MapTrifold
+              <MapPin
                 size={13}
                 style={{ color: "var(--postal-ink-muted)" }}
               />

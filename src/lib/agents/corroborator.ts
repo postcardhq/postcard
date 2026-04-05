@@ -1,7 +1,7 @@
 import { google } from "@ai-sdk/google";
 import { streamText, stepCountIs } from "ai";
 import { z } from "zod";
-import type { Postcard } from "../postcard";
+import type { Postcard } from "@/src/lib/postcard";
 
 const TRUSTED_DOMAINS = [
   "nytimes.com",

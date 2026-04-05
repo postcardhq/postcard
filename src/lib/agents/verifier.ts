@@ -2,6 +2,8 @@ import { google } from "@ai-sdk/google";
 import { generateText } from "ai";
 import { z } from "zod";
 
+import type { Postcard } from "@/src/lib/postcard";
+
 export const AuditResultSchema = z.object({
   originScore: z.number().min(0).max(1),
   temporalScore: z.number().min(0).max(1),
@@ -13,7 +15,7 @@ export type AuditResult = z.infer<typeof AuditResultSchema>;
 
 export async function auditPostcard(
   url: string,
-  postcard: import("../postcard").Postcard,
+  postcard: Postcard,
 ): Promise<{
   originScore: number;
   temporalScore: number;
