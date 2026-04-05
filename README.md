@@ -79,8 +79,8 @@ A key technical takeaway from this hackathon was discovering **how oEmbed APIs c
 
 ## Documentation
 
-- **[CONTRIBUTING.md](CONTRIBUTING.md):** Comprehensive **[Quick start](CONTRIBUTING.md#quick-start)** guide, technical stack, and architecture notes.
-- **[DESIGN.md](DESIGN.md):** Full technical specification and pipeline stages.
-- **[PROJECT_SUMMARY.md](PROJECT_SUMMARY.md):** High-level summary for the PantherHacks 2026 Devpost submission.
-- **[PITCH.md](PITCH.md):** Pitch script and video cues.
+- **[docs/CONTRIBUTING.md](docs/CONTRIBUTING.md):** Comprehensive **[Quick start](docs/CONTRIBUTING.md#quick-start)** guide, technical stack, and architecture notes.
+- **[docs/DESIGN.md](docs/DESIGN.md):** Full technical specification and pipeline stages.
+- **[docs/PROJECT_SUMMARY.md](docs/PROJECT_SUMMARY.md):** High-level summary for the PantherHacks 2026 Devpost submission.
+- **[docs/PITCH.md](docs/PITCH.md):** Pitch script and video cues.
 - **[docs/API.md](docs/API.md):** Full API reference with examples.
