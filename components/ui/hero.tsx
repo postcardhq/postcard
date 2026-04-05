@@ -2,8 +2,6 @@
 
 import { motion } from "motion/react";
 
-/* ── SVG Primitives ──────────────────────────────────── */
-
 function CancelStamp({ className = "" }: { className?: string }) {
   return (
     <svg
@@ -26,7 +24,6 @@ function CancelStamp({ className = "" }: { className?: string }) {
         stroke="var(--postal-red)"
         strokeWidth="1"
       />
-      {/* Cancel wavy lines */}
       <line
         x1="5"
         y1="42"
@@ -51,7 +48,6 @@ function CancelStamp({ className = "" }: { className?: string }) {
         stroke="var(--postal-red)"
         strokeWidth="2.5"
       />
-      {/* Arc text path */}
       <path id="stamp-arc-top" d="M 15,50 A 35,35 0 0,1 85,50" fill="none" />
       <path id="stamp-arc-bot" d="M 15,50 A 35,35 0 0,0 85,50" fill="none" />
       <text
@@ -91,7 +87,6 @@ function WaxSeal() {
           stroke="rgba(244,192,90,0.5)"
           strokeWidth="1"
         />
-        {/* Decorative star ring */}
         {Array.from({ length: 8 }).map((_, i) => {
           const angle = (i * 360) / 8;
           const rad = (angle * Math.PI) / 180;
@@ -101,7 +96,6 @@ function WaxSeal() {
             <circle key={i} cx={x} cy={y} r="1.2" fill="rgba(244,192,90,0.6)" />
           );
         })}
-        {/* P monogram */}
         <text
           x="26"
           y="32"
@@ -175,15 +169,12 @@ function Cloud({
   );
 }
 
-/* ── Hero ────────────────────────────────────────────── */
-
 export function Hero() {
   return (
     <section
       className="relative w-full overflow-hidden"
       style={{ minHeight: "460px" }}
     >
-      {/* Sky background */}
       <div
         className="absolute inset-0"
         style={{
@@ -198,7 +189,6 @@ export function Hero() {
         }}
       />
 
-      {/* Drifting clouds (SVG layer) */}
       <svg
         className="absolute inset-0 w-full"
         style={{ height: "70%" }}
@@ -214,7 +204,6 @@ export function Hero() {
         <Cloud cx={700} cy={110} scale={0.5} driftClass="cloud-drift-slow" />
       </svg>
 
-      {/* Rolling hills silhouette */}
       <svg
         className="absolute bottom-0 left-0 w-full"
         viewBox="0 0 1200 120"
@@ -237,7 +226,6 @@ export function Hero() {
         />
       </svg>
 
-      {/* Cancel stamp — top right, decorative */}
       <motion.div
         className="absolute top-6 right-8 opacity-30 pointer-events-none"
         initial={{ opacity: 0, rotate: -12, scale: 0.8 }}
@@ -247,9 +235,7 @@ export function Hero() {
         <CancelStamp className="w-24 h-24" />
       </motion.div>
 
-      {/* Content */}
       <div className="relative z-10 flex flex-col items-center pt-16 pb-24 px-6 text-center">
-        {/* Airmail stripe top bar */}
         <motion.div
           className="w-full absolute top-0 left-0 h-3"
           style={{
@@ -266,7 +252,6 @@ export function Hero() {
           transition={{ duration: 0.5 }}
         />
 
-        {/* Title */}
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
@@ -291,7 +276,6 @@ export function Hero() {
           </h1>
         </motion.div>
 
-        {/* Rule */}
         <motion.div
           className="flex items-center gap-4 mb-4 mt-1"
           initial={{ opacity: 0, scaleX: 0 }}
@@ -317,7 +301,6 @@ export function Hero() {
           />
         </motion.div>
 
-        {/* Tagline */}
         <motion.p
           className="text-base italic mb-10"
           style={{
@@ -334,7 +317,6 @@ export function Hero() {
           Trace every post back to its source.
         </motion.p>
 
-        {/* Wax seal status */}
         <motion.div
           initial={{ opacity: 0, scale: 0.7 }}
           animate={{ opacity: 1, scale: 1 }}

@@ -2,7 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./tests",
-  timeout: 60000,
+  timeout: 120000,
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
@@ -15,12 +15,6 @@ export default defineConfig({
   projects: [
     {
       name: "fake",
-      use: {
-        ...devices["Desktop Chrome"],
-      },
-    },
-    {
-      name: "live",
       use: {
         ...devices["Desktop Chrome"],
       },

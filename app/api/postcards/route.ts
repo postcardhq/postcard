@@ -1,12 +1,132 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   processPostcardFromUrl,
-  processPostcardFromImage,
   PostcardRequestSchema,
 } from "@/src/lib/postcard";
+import { db } from "@/src/db";
+import { analyses, posts } from "@/src/db/schema";
+import { eq, sql } from "drizzle-orm";
+import { normalizePostUrl } from "@/src/lib/url";
+import type { Corroboration } from "@/src/lib/postcard";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
+
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Accept",
+};
+
+function corsResponse(body: unknown, status: number): NextResponse {
+  return NextResponse.json(body, { status, headers: CORS_HEADERS });
+}
+
+function corsRedirect(url: string): NextResponse {
+  return NextResponse.redirect(url, {
+    headers: {
+      ...CORS_HEADERS,
+      Location: url,
+    },
+  });
+}
+
+async function getExistingAnalysis(url: string) {
+  const normalized = normalizePostUrl(url);
+  const result = await db
+    .select()
+    .from(analyses)
+    .innerJoin(posts, eq(posts.id, analyses.postId))
+    .where(eq(posts.url, normalized))
+    .orderBy(sql`${analyses.createdAt} DESC`)
+    .limit(1);
+
+  if (result.length === 0) return null;
+  return result[0];
+}
+
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  const url = request.nextUrl.searchParams.get("url");
+
+  if (!url) {
+    return corsResponse(
+      { error: "Missing required 'url' query parameter." },
+      400,
+    );
+  }
+
+  const accept = request.headers.get("accept") || "";
+  const wantsJson = accept.includes("application/json");
+
+  try {
+    const normalized = normalizePostUrl(url);
+    const existing = await getExistingAnalysis(normalized);
+
+    if (existing) {
+      const { analyses: analysis, posts: post } = existing;
+      const report = {
+        postcard: {
+          platform: analysis.platform,
+          mainText: post.mainText || "",
+          username: post.username || undefined,
+          timestampText: post.timestampText || undefined,
+        },
+        markdown: post.markdown || "",
+        triangulation: {
+          targetUrl: analysis.url,
+          queries: [],
+        },
+        audit: {
+          originScore: analysis.originScore || 0,
+          temporalScore: analysis.temporalScore || 0,
+          totalScore: analysis.postcardScore / 100,
+          auditLog: JSON.parse((analysis.auditLog as string) || "[]"),
+        },
+        corroboration: {
+          primarySources: JSON.parse(
+            (analysis.primarySources as string) || "[]",
+          ),
+          queriesExecuted: JSON.parse(
+            (analysis.queriesExecuted as string) || "[]",
+          ),
+          verdict: analysis.verdict as Corroboration["verdict"],
+          summary: analysis.summary || "",
+          confidenceScore: analysis.confidenceScore || 0,
+          corroborationLog: JSON.parse(
+            (analysis.corroborationLog as string) || "[]",
+          ),
+        },
+        timestamp: analysis.createdAt.toISOString(),
+        analysisId: analysis.id,
+      };
+
+      if (wantsJson) {
+        return corsResponse(report, 200);
+      }
+
+      return corsRedirect(`/postcards?url=${encodeURIComponent(normalized)}`);
+    }
+
+    if (wantsJson) {
+      return corsResponse(
+        {
+          error:
+            "Analysis not found. POST to /api/postcards to initiate a new trace.",
+        },
+        404,
+      );
+    }
+
+    return corsRedirect(
+      `/postcards?url=${encodeURIComponent(normalized)}&forceRefresh=true`,
+    );
+  } catch (error) {
+    return corsResponse(
+      { error: error instanceof Error ? error.message : "Analysis failed" },
+      500,
+    );
+  }
+}
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const traceId = crypto.randomUUID();
@@ -20,13 +140,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const parsed = PostcardRequestSchema.safeParse(body);
   if (!parsed.success) {
+    console.error("Postcard request validation failed:", parsed.error.format());
     return NextResponse.json(
       { error: "Invalid request.", details: parsed.error.flatten() },
       { status: 400 },
     );
   }
 
-  const { url, image, userApiKey } = parsed.data;
+  const { url, image, userApiKey, forceRefresh } = parsed.data;
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -48,49 +169,51 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           traceId,
         });
 
-        let report;
-        let forensicReport;
-
         if (image) {
           send("error", {
             error:
-              "Image upload is not yet supported. Please submit a post URL instead.",
+              "Image-based forensic analysis is currently disabled. Please provide a direct post URL for verification.",
           });
           controller.close();
           return;
-        } else {
-          // URL-based analysis
-          report = await processPostcardFromUrl(
-            url!,
-            userApiKey,
-            (stage, message, progress) => {
-              send("progress", { stage, message, progress });
-            },
-          );
-          // Build forensic report from URL-based response
-          forensicReport = {
-            ocr: {
-              markdown: report.markdown,
-              postmark: {
-                platform: report.platform,
-                mainText: report.markdown.slice(0, 500),
-              },
-            },
-            triangulation: {
-              targetUrl: report.url,
-              queries: [],
-            },
-            audit: {
-              originScore: 0.5,
-              temporalScore: 0.5,
-              visualScore: 0,
-              totalScore: report.postcardScore,
-              auditLog: ["URL-based analysis - direct source verification"],
-            },
-            corroboration: report.corroboration,
-            timestamp: report.timestamp,
-          };
         }
+
+        // URL-based analysis
+        const report = await processPostcardFromUrl(
+          url!,
+          userApiKey,
+          (stage, message, progress) => {
+            send("progress", { stage, message, progress });
+          },
+          forceRefresh,
+        );
+
+        // Build forensic report from URL-based response
+        const forensicReport = {
+          postcard: {
+            platform: report.platform,
+            mainText: report.markdown.slice(0, 500),
+          },
+          markdown: report.markdown,
+          triangulation: {
+            targetUrl: report.url,
+            queries: [],
+          },
+          audit: {
+            originScore: 0.5,
+            temporalScore: 0.5,
+            totalScore: 0.5, // 50/50 Origin and Temporal
+            auditLog: [
+              "Analysis initiated via direct URL submission",
+              "Skipping visual consistency audit (no source image provided)",
+              "Origin reputation based on platform ingestion client metrics",
+              `Direct source verification: ${report.url}`,
+            ],
+          },
+          corroboration: report.corroboration,
+          timestamp: report.timestamp,
+          analysisId: report.analysisId,
+        };
 
         send("complete", {
           postcard: report,
@@ -112,6 +235,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       "Cache-Control": "no-cache",
       Connection: "keep-alive",
       "X-Trace-Id": traceId,
+      ...CORS_HEADERS,
     },
+  });
+}
+
+export async function OPTIONS(): Promise<NextResponse> {
+  return new NextResponse(null, {
+    headers: CORS_HEADERS,
   });
 }

@@ -16,8 +16,8 @@ interface StageInfo {
 
 const STAGES: StageInfo[] = [
   {
-    label: "Vision Parse",
-    detail: "Extracting text, handles & timestamps…",
+    label: "Ingestion Agent",
+    detail: "Fetching live content via Unified Client…",
     mailboxX: 22,
   },
   {
@@ -206,11 +206,12 @@ type ApiProgress = {
 async function fetchReportWithProgress(
   postUrl: string,
   onProgress: (progress: ApiProgress) => void,
+  forceRefresh?: boolean,
 ): Promise<PostcardReport> {
   const response = await fetch("/api/postcards", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ url: postUrl }),
+    body: JSON.stringify({ url: postUrl, forceRefresh }),
   });
 
   if (!response.ok || !response.body) {
@@ -252,10 +253,12 @@ async function fetchReportWithProgress(
 
 export function AnalysisJourney({
   postUrl,
+  forceRefresh,
   onComplete,
   onReset,
 }: {
   postUrl: string;
+  forceRefresh?: boolean;
   onComplete: (report: PostcardReport) => void;
   onReset: () => void;
 }) {
@@ -263,7 +266,7 @@ export function AnalysisJourney({
   const [stageLabel, setStageLabel] = useState("Dispatched");
   const [stageDetail, setStageDetail] = useState("Evidence en route…");
   const [error, setError] = useState<string | null>(null);
-  const [isInsufficientData, setIsInsufficientData] = useState(false);
+  const [failedReport, setFailedReport] = useState<PostcardReport | null>(null);
   const pendingReport = useRef<PostcardReport | null>(null);
   const onCompleteRef = useRef(onComplete);
   const hasCompletedRef = useRef(false);
@@ -273,23 +276,50 @@ export function AnalysisJourney({
   }, [onComplete]);
 
   useEffect(() => {
-    fetchReportWithProgress(postUrl, (progress) => {
-      const { stage: serverStage, message, progress: pct } = progress;
+    // Dynamically update document title based on forensic progress
+    const originalTitle = document.title;
+    if (error) {
+      document.title = "Analysis Failed | Postcard";
+    } else {
+      document.title = `${stageLabel} | Postcard`;
+    }
+    return () => {
+      document.title = originalTitle;
+    };
+  }, [stageLabel, error]);
 
-      setStageLabel(serverStage === "starting" ? "Dispatched" : serverStage);
-      setStageDetail(message);
+  useEffect(() => {
+    fetchReportWithProgress(
+      postUrl,
+      (progress) => {
+        const { stage: serverStage, message, progress: pct } = progress;
 
-      if (pct < 0.33) setStage(1);
-      else if (pct < 0.66) setStage(2);
-      else if (pct < 1) setStage(3);
-      else setStage(4);
-    })
+        setStageLabel(serverStage === "starting" ? "Dispatched" : serverStage);
+        setStageDetail(message);
+
+        if (pct < 0.33) setStage(1);
+        else if (pct < 0.66) setStage(2);
+        else if (pct < 1) setStage(3);
+        else setStage(4);
+      },
+      forceRefresh,
+    )
       .then((report) => {
-        if (report.corroboration.verdict === "insufficient_data") {
+        // If we have markdown content, we "traced" it.
+        // We only show the error if we have NO content AND insufficient data.
+        const hasContent = !!(
+          report.markdown && report.markdown.trim().length > 50
+        );
+
+        if (
+          report.corroboration.verdict === "insufficient_data" &&
+          !hasContent
+        ) {
           setError(
             report.corroboration.summary ||
               "Unable to locate the linked content. The URL may be inaccessible or require authentication.",
           );
+          setFailedReport(report);
           if (!hasCompletedRef.current) {
             hasCompletedRef.current = true;
           }
@@ -305,7 +335,7 @@ export function AnalysisJourney({
         setError(err instanceof Error ? err.message : "Analysis failed");
         console.error("Analysis failed:", err);
       });
-  }, [postUrl]);
+  }, [postUrl, forceRefresh]);
 
   const planeX =
     stage === 0
@@ -448,8 +478,32 @@ export function AnalysisJourney({
                 }}
                 onClick={onReset}
               >
-                Try Again
+                Try Another Post
               </button>
+
+              {failedReport?.markdown && (
+                <div className="w-full mt-2 text-left">
+                  <p
+                    className="mb-1.5 text-[9px] tracking-widest uppercase"
+                    style={{ color: "var(--postal-ink-faint)" }}
+                  >
+                    Result from Jina Reader
+                  </p>
+                  <pre
+                    className="text-[10px] leading-relaxed whitespace-pre-wrap overflow-y-auto"
+                    style={{
+                      fontFamily: "var(--font-serif)",
+                      color: "var(--postal-ink-muted)",
+                      background: "rgba(0,0,0,0.03)",
+                      border: "1px dashed var(--postal-ink-faint)",
+                      padding: "0.75rem",
+                      maxHeight: "150px",
+                    }}
+                  >
+                    {failedReport.markdown}
+                  </pre>
+                </div>
+              )}
             </motion.div>
           )}
 

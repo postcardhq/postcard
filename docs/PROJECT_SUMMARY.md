@@ -19,19 +19,19 @@ Screenshots strip all context. By the time something goes viral it's been croppe
 
 **User flow:** Enter Post URL → Forensic Pipeline Runs → Postcard Score + Subscore Breakdown appears.
 
-### Stage 1: URL entrypoint
+### Entrypoint
 
 Users submit the direct source URL for forensic verification. While the system supports screenshot-to-URL resolution, the primary focus is the direct URL entrypoint to ensure 100% forensic precision.
 
-### Stage 2: multimodal ingestion
+### Ingestion
 
 Postcard uses the **Jina Reader API** to ingest live content and metadata (like counts, absolute timestamps, text) from the provided URL. This establishes the "ground truth" for the forensic audit.
 
-### Stage 3: forensic audit
+### Audit
 
 The system uses **Playwright** to scrape the live site and compute forensic subscores (Origin, Temporal, Visual).
 
-### Stage 4: corroboration
+### Corroboration
 
 An AI SDK agent loop with **Google Search grounding** performs deep dorking across trusted domains (X, Reddit, and News archives) to verify or refute the claim.
 

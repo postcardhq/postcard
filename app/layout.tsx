@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Playfair_Display, EB_Garamond } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import { Navbar } from "@/components/ui/navbar";
 
 const playfair = Playfair_Display({
   subsets: ["latin"],
@@ -31,12 +32,15 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={cn("h-full antialiased", playfair.variable, garamond.variable)}
     >
       <body
         className="min-h-full flex flex-col"
+        suppressHydrationWarning
         style={{ background: "var(--postal-paper)" }}
       >
+        <Navbar />
         {children}
       </body>
     </html>

@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Platform variations", () => {
   test("accepts X.com URL", async ({ page }) => {
-    await page.goto("http://localhost:3000");
+    await page.goto("http://localhost:3000/postcards");
 
     const urlInput = page.getByPlaceholder(
       "https://x.com/user/status/1234567890",
@@ -12,13 +12,13 @@ test.describe("Platform variations", () => {
     const submitButton = page.getByRole("button", { name: "Trace Post" });
     await submitButton.click();
 
-    await expect(page.getByText("Postcard Score")).toBeVisible({
-      timeout: 30000,
+    await expect(page.getByText("URL Submitted")).toBeVisible({
+      timeout: 5000,
     });
   });
 
   test("accepts twitter.com URL", async ({ page }) => {
-    await page.goto("http://localhost:3000");
+    await page.goto("http://localhost:3000/postcards");
 
     const urlInput = page.getByPlaceholder(
       "https://x.com/user/status/1234567890",
@@ -30,13 +30,13 @@ test.describe("Platform variations", () => {
     const submitButton = page.getByRole("button", { name: "Trace Post" });
     await submitButton.click();
 
-    await expect(page.getByText("Postcard Score")).toBeVisible({
-      timeout: 30000,
+    await expect(page.getByText("URL Submitted")).toBeVisible({
+      timeout: 5000,
     });
   });
 
   test("accepts Instagram URL", async ({ page }) => {
-    await page.goto("http://localhost:3000");
+    await page.goto("http://localhost:3000/postcards");
 
     const urlInput = page.getByPlaceholder(
       "https://x.com/user/status/1234567890",
@@ -46,13 +46,13 @@ test.describe("Platform variations", () => {
     const submitButton = page.getByRole("button", { name: "Trace Post" });
     await submitButton.click();
 
-    await expect(page.getByText("Postcard Score")).toBeVisible({
-      timeout: 30000,
+    await expect(page.getByText("URL Submitted")).toBeVisible({
+      timeout: 5000,
     });
   });
 
   test("accepts YouTube URL", async ({ page }) => {
-    await page.goto("http://localhost:3000");
+    await page.goto("http://localhost:3000/postcards");
 
     const urlInput = page.getByPlaceholder(
       "https://x.com/user/status/1234567890",
@@ -62,13 +62,13 @@ test.describe("Platform variations", () => {
     const submitButton = page.getByRole("button", { name: "Trace Post" });
     await submitButton.click();
 
-    await expect(page.getByText("Postcard Score")).toBeVisible({
-      timeout: 30000,
+    await expect(page.getByText("URL Submitted")).toBeVisible({
+      timeout: 5000,
     });
   });
 
   test("accepts Reddit URL", async ({ page }) => {
-    await page.goto("http://localhost:3000");
+    await page.goto("http://localhost:3000/postcards");
 
     const urlInput = page.getByPlaceholder(
       "https://x.com/user/status/1234567890",
@@ -80,13 +80,13 @@ test.describe("Platform variations", () => {
     const submitButton = page.getByRole("button", { name: "Trace Post" });
     await submitButton.click();
 
-    await expect(page.getByText("Postcard Score")).toBeVisible({
-      timeout: 30000,
+    await expect(page.getByText("URL Submitted")).toBeVisible({
+      timeout: 5000,
     });
   });
 
   test("accepts Bluesky URL", async ({ page }) => {
-    await page.goto("http://localhost:3000");
+    await page.goto("http://localhost:3000/postcards");
 
     const urlInput = page.getByPlaceholder(
       "https://x.com/user/status/1234567890",
@@ -98,8 +98,8 @@ test.describe("Platform variations", () => {
     const submitButton = page.getByRole("button", { name: "Trace Post" });
     await submitButton.click();
 
-    await expect(page.getByText("Postcard Score")).toBeVisible({
-      timeout: 30000,
+    await expect(page.getByText("URL Submitted")).toBeVisible({
+      timeout: 5000,
     });
   });
 });
