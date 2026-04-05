@@ -96,24 +96,28 @@ export default async function PostcardsPage({ searchParams }: Props) {
   let initialReport = null;
   let processingUrl = null;
 
-  if (normalizedUrl && !shouldRefresh) {
+  if (normalizedUrl) {
     const data = await getPostcardsByUrl(normalizedUrl);
-    if (data) {
+    if (data && !shouldRefresh) {
       initialReport = dbRowToReport(data.postcardRow, data.postRow);
       // Increment hit counter on every view of a completed report
       if (data.postcardRow.status === "completed") {
         incrementPostcardHits(data.postcardRow.id).catch(console.error);
       }
-    }
-  }
+    } else if (normalizedUrl && (shouldRefresh || !data)) {
+      // Start fresh analysis if refresh=true OR no cached data exists
+      const { id } = await createPostcard(normalizedUrl);
+      processPostcardFromUrl(normalizedUrl, undefined, () => {}, true, id).catch(
+        console.error,
+      );
+      processingUrl = normalizedUrl;
 
-  // If we have a URL but no report (either new or refresh), start processing
-  if (normalizedUrl && (!initialReport || shouldRefresh)) {
-    const { id } = await createPostcard(normalizedUrl);
-    processPostcardFromUrl(normalizedUrl, undefined, () => {}, true, id).catch(
-      console.error,
-    );
-    processingUrl = normalizedUrl;
+      // Even on refresh, if we have old data, we can use it for the "replay" mock
+      // This solves the refresh+replay stall.
+      if (data && shouldReplay) {
+        initialReport = dbRowToReport(data.postcardRow, data.postRow);
+      }
+    }
   }
 
   return (

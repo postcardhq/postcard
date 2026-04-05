@@ -28,6 +28,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const url = searchParams.get("url");
+    const refresh = searchParams.get("refresh") === "true";
 
     if (!url) {
       return NextResponse.json(
@@ -37,35 +38,58 @@ export async function GET(request: Request) {
     }
 
     const normalizedUrl = normalizePostUrl(url);
-    const result = await db
-      .select()
-      .from(postcards)
-      .innerJoin(posts, eq(posts.url, normalizedUrl))
-      .orderBy(sql`${postcards.createdAt} DESC`)
-      .limit(1);
 
-    if (result.length === 0) {
+    // 1. If NOT refreshing, try to find cached result
+    if (!refresh) {
+      const result = await db
+        .select()
+        .from(postcards)
+        .innerJoin(posts, eq(posts.url, normalizedUrl))
+        .orderBy(sql`${postcards.createdAt} DESC`)
+        .limit(1);
+
+      if (result.length > 0) {
+        const { postcards: row, posts: post } = result[0];
+        const report = dbRowToReport(row, post);
+
+        return NextResponse.json(
+          PostcardResponseSchema.parse({
+            url: normalizedUrl,
+            markdown: post.markdown || "",
+            platform: row.platform || "Other",
+            corroboration: report.corroboration,
+            postcardScore: row.postcardScore / 100,
+            timestamp: row.createdAt.toISOString(),
+            id: row.id,
+            forensicReport: report,
+          }),
+          { headers: CORS_HEADERS },
+        );
+      }
+
+      // If not refreshing and not found, return 404 (parity with tests)
       return NextResponse.json(
-        { error: "Postcard not found" },
+        {
+          status: "not_found",
+          error: "Analysis not found. Use ?refresh=true to initiate a new trace.",
+        },
         { status: 404, headers: CORS_HEADERS },
       );
     }
 
-    const { postcards: row, posts: post } = result[0];
-    const report = dbRowToReport(row, post);
+    // 2. If refresh=true OR forced by logic above, start fresh analysis
+    const { id } = await createPostcard(normalizedUrl);
+    processPostcardFromUrl(normalizedUrl, undefined, () => {}, true, id).catch(
+      (err) => console.error("Background trace failed:", err),
+    );
 
     return NextResponse.json(
-      PostcardResponseSchema.parse({
-        url: normalizedUrl,
-        markdown: post.markdown || "",
-        platform: row.platform || "Other",
-        corroboration: report.corroboration,
-        postcardScore: row.postcardScore / 100,
-        timestamp: row.createdAt.toISOString(),
-        id: row.id,
-        forensicReport: report,
-      }),
-      { headers: CORS_HEADERS },
+      {
+        status: "processing",
+        id,
+        message: "Forensic trace initialized.",
+      },
+      { status: 202, headers: CORS_HEADERS },
     );
   } catch (error) {
     console.error("API GET Error:", error);

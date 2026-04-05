@@ -131,7 +131,9 @@ export default function PostcardsClient({
   }, []);
 
   useEffect(() => {
-    if (processingUrl && !report && !postcardStatus && !isReplay) {
+    // If we're performing a real analysis (processingUrl), ALWAYS poll
+    // regardless of isReplay. This ensures the DB result is updated.
+    if (processingUrl && !report && !postcardStatus) {
       startPolling(processingUrl);
     }
     return () => {
@@ -139,7 +141,7 @@ export default function PostcardsClient({
         clearInterval(pollingRef.current);
       }
     };
-  }, [processingUrl, report, postcardStatus, startPolling, isReplay]);
+  }, [processingUrl, report, postcardStatus, startPolling]);
 
   const currentStatus = isReplay ? mockStatus : postcardStatus;
 

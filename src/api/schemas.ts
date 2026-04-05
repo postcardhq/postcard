@@ -83,6 +83,7 @@ export const PostcardRequestSchema = z.object({
   url: z.string().url(),
   userApiKey: z.string().optional(),
   refresh: z.boolean().optional(),
+  replay: z.boolean().optional(),
   id: z.string().optional(),
 });
 

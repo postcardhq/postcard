@@ -100,7 +100,7 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
   };
 
   const handleReverify = () => {
-    window.location.href = `/?url=${encodeURIComponent(report.triangulation.targetUrl || "")}&forceRefresh=true`;
+    window.location.href = `/?url=${encodeURIComponent(report.triangulation.targetUrl || "")}&refresh=true`;
   };
 
   const handleHome = () => {

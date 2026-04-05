@@ -116,9 +116,9 @@ Submits a new URL for forensic verification. Creates a postcard and returns imme
 
 | Field          | Required | Type    | Description                        |
 | :------------- | :------- | :------ | :--------------------------------- |
-| `url`          | Yes      | string  | The social media post URL          |
-| `userApiKey`   | No       | string  | Optional API key for rate limiting |
-| `forceRefresh` | No       | boolean | Force re-analysis even if cached   |
+| `url`      | Yes      | string  | The social media post URL          |
+| `userApiKey`| No       | string  | Optional API key for rate limiting |
+| `refresh`   | No       | boolean | Force re-analysis even if cached   |
 
 **Request:**
 
@@ -126,7 +126,7 @@ Submits a new URL for forensic verification. Creates a postcard and returns imme
 {
   "url": "https://x.com/user/status/123",
   "userApiKey": "optional-api-key",
-  "forceRefresh": false
+  "refresh": false
 }
 ```
 
@@ -154,7 +154,7 @@ If a processing postcard already exists for this URL, returns that postcard inst
 }
 ```
 
-If a completed analysis exists and `forceRefresh` is not set, returns cached results:
+If a completed analysis exists and `refresh` is not set, returns cached results:
 
 ```json
 {
