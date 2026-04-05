@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { db } from "@/db";
-import { postcards, posts } from "@/db/schema";
+import { postcards, posts, PostSchema, PostcardRowSchema } from "@/db/schema";
 import { eq, sql, and } from "drizzle-orm";
 import { corroboratePostcard } from "./agents/corroborator";
 import { auditPostcard } from "./agents/verifier";
@@ -79,6 +79,30 @@ export async function updatePostcardRow(
     .where(eq(postcards.id, id));
 }
 
+export async function getOrCreatePostByUrl(
+  url: string,
+): Promise<{ id: string; url: string }> {
+  const normalized = normalizePostUrl(url);
+
+  const existing = await db
+    .select()
+    .from(posts)
+    .where(eq(posts.url, normalized))
+    .limit(1);
+
+  if (existing.length > 0) {
+    return existing[0];
+  }
+
+  const id = crypto.randomUUID();
+  await db.insert(posts).values({
+    id,
+    url: normalized,
+  });
+
+  return { id, url: normalized };
+}
+
 export async function getExistingProcessingPostcard(url: string) {
   const normalized = normalizePostUrl(url);
   const result = await db
@@ -101,28 +125,11 @@ export async function createPostcard(
   forceRefresh?: boolean,
 ): Promise<{ postId: string; id: string }> {
   const normalized = normalizePostUrl(url);
-
-  let pId: string;
-  const aId = crypto.randomUUID();
-
-  const existingPost = await db
-    .select()
-    .from(posts)
-    .where(eq(posts.url, normalized))
-    .limit(1);
-
-  if (existingPost.length > 0) {
-    pId = existingPost[0].id;
-  } else {
-    pId = crypto.randomUUID();
-    await db.insert(posts).values({
-      id: pId,
-      url: normalized,
-    });
-  }
+  const { id: pId } = await getOrCreatePostByUrl(normalized);
+  const id = crypto.randomUUID();
 
   await db.insert(postcards).values({
-    id: aId,
+    id,
     postId: pId,
     url: normalized,
     platform: "Other",
@@ -134,7 +141,7 @@ export async function createPostcard(
     startedAt: new Date(),
   });
 
-  return { postId: pId, id: aId };
+  return { postId: pId, id };
 }
 
 export const PostcardSchema = z.object({
