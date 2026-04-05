@@ -3,12 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import type { PostcardReport } from "@/src/lib/postcard";
-import { PaperPlane, Cloud } from "@/components/illustrations";
+import { Cloud } from "@/components/illustrations";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+const EASE_OUT: [number, number, number, number] = [0.0, 0.0, 0.3, 1.0];
 
-// Resolved value used directly in filter — CSS variables are not interpolatable
-// by the browser animation engine, so we use the raw hex here.
+// Resolved hex — CSS variables are not interpolatable by the browser animation engine.
 const POSTAL_BLUE_HEX = "#2464a0";
 
 export type AnalysisStage = 0 | 1 | 2 | 3 | 4;
@@ -16,6 +16,7 @@ export type AnalysisStage = 0 | 1 | 2 | 3 | 4;
 interface StageInfo {
   label: string;
   detail: string;
+  /** Horizontal position as a percentage of the SVG viewBox width (0-100). */
   mailboxX: number;
 }
 
@@ -37,9 +38,60 @@ const STAGES: StageInfo[] = [
   },
 ];
 
-/** USPS-style collection box rendered entirely in SVG.
- *  Caller wraps with <g transform="translate(bx, by)"> for positioning.
- *  Internal coordinates: 96 wide × 130 tall, grounded at y=130. */
+// SVG viewBox: 0 0 1200 380
+// Each box: 96 wide × 130 tall, grounded at y≈298.
+// Box center x in SVG units = (mailboxX / 100) * 1200.
+// Plane dimensions after scale(0.667): 80 wide × 40 tall.
+// Plane x-center over box = cx − 40; y clears box top (168) by ~25 units → y = 103.
+const BOX_TOP_Y = 168; // 298 (ground) − 130 (box height)
+const PLANE_HOVER_Y = BOX_TOP_Y - 40 - 25; // 103 — plane bottom sits 25 SVG-units above box top
+
+const PLANE_TARGETS: Record<AnalysisStage, { x: number; y: number }> = {
+  0: { x: -110,                       y: PLANE_HOVER_Y }, // off-screen left, same altitude
+  1: { x: 0.22 * 1200 - 40,           y: PLANE_HOVER_Y }, // 224
+  2: { x: 0.50 * 1200 - 40,           y: PLANE_HOVER_Y }, // 560
+  3: { x: 0.78 * 1200 - 40,           y: PLANE_HOVER_Y }, // 896
+  4: { x: 1380,                        y: PLANE_HOVER_Y - 65 }, // fly away right + up
+};
+
+// ── Inline plane shape (scaled from viewBox 0 0 120 60 → 80×40 SVG units) ─
+function PlaneShape() {
+  return (
+    <g transform="scale(0.667)">
+      <polygon
+        points="0,32 120,8 82,32"
+        fill="var(--postal-paper)"
+        stroke="var(--postal-ink-muted)"
+        strokeWidth="1.2"
+      />
+      <polygon
+        points="0,32 82,32 52,52"
+        fill="var(--postal-paper-2)"
+        stroke="var(--postal-ink-muted)"
+        strokeWidth="1.2"
+      />
+      <line
+        x1="0" y1="32" x2="82" y2="32"
+        stroke="var(--postal-ink-muted)"
+        strokeWidth="1"
+      />
+      <line
+        x1="30" y1="20" x2="75" y2="14"
+        stroke="var(--postal-red)"
+        strokeWidth="1.5"
+        opacity="0.4"
+      />
+      <line
+        x1="30" y1="24" x2="75" y2="18"
+        stroke="var(--postal-blue)"
+        strokeWidth="1.5"
+        opacity="0.4"
+      />
+    </g>
+  );
+}
+
+// ── USPS-style collection box ───────────────────────────────────────────────
 function CollectionBox({
   active,
   passed,
@@ -67,12 +119,9 @@ function CollectionBox({
       {/* Curved cap */}
       <ellipse cx="48" cy="18" rx="48" ry="10" fill={bodyColor} />
 
-      {/* Top highlight stripe */}
+      {/* Top highlight */}
       <ellipse
-        cx="48"
-        cy="18"
-        rx="44"
-        ry="7"
+        cx="48" cy="18" rx="44" ry="7"
         fill="none"
         stroke="rgba(255,255,255,0.15)"
         strokeWidth="2"
@@ -80,28 +129,16 @@ function CollectionBox({
 
       {/* Mail slot */}
       <rect x="18" y="40" width="60" height="6" rx="3" fill="#0f2d4a" />
-      <rect
-        x="18"
-        y="40"
-        width="60"
-        height="3"
-        rx="1.5"
-        fill="rgba(0,0,0,0.3)"
-      />
+      <rect x="18" y="40" width="60" height="3" rx="1.5" fill="rgba(0,0,0,0.3)" />
 
-      {/* Status panel background */}
+      {/* Status panel */}
       <rect
-        x="10"
-        y="56"
-        width="76"
-        height="42"
-        rx="3"
+        x="10" y="56" width="76" height="42" rx="3"
         fill="var(--postal-paper-2)"
         stroke="var(--postal-ink-faint)"
         strokeWidth="0.75"
       />
 
-      {/* Status label — foreignObject for rich typography */}
       <foreignObject x="10" y="56" width="76" height="42">
         <div
           // @ts-expect-error — xmlns required for SVG foreignObject
@@ -133,10 +170,8 @@ function CollectionBox({
         </div>
       </foreignObject>
 
-      {/* COLLECTION BOX micro-label */}
       <text
-        x="48"
-        y="106"
+        x="48" y="106"
         textAnchor="middle"
         fontSize="5.5"
         fill="rgba(255,255,255,0.55)"
@@ -146,19 +181,13 @@ function CollectionBox({
         COLLECTION BOX
       </text>
 
-      {/* Left bevel highlight */}
-      <rect
-        x="0"
-        y="22"
-        width="4"
-        height="84"
-        rx="2"
-        fill="rgba(255,255,255,0.12)"
-      />
+      {/* Left bevel */}
+      <rect x="0" y="22" width="4" height="84" rx="2" fill="rgba(255,255,255,0.12)" />
     </g>
   );
 }
 
+// ── API helpers ─────────────────────────────────────────────────────────────
 type ApiProgress = {
   stage: string;
   message: string;
@@ -213,6 +242,7 @@ async function fetchReportWithProgress(
   throw new Error("Stream ended without a result.");
 }
 
+// ── AnalysisJourney ─────────────────────────────────────────────────────────
 export function AnalysisJourney({
   postUrl,
   forceRefresh,
@@ -222,7 +252,6 @@ export function AnalysisJourney({
 }: {
   postUrl: string;
   forceRefresh?: boolean;
-  /** When set, skip the API call and animate through stages using this report. */
   cachedReport?: PostcardReport | null;
   onComplete: (report: PostcardReport) => void;
   onReset: () => void;
@@ -246,9 +275,7 @@ export function AnalysisJourney({
   }, [stageLabel, error]);
 
   useEffect(() => {
-    // ── Cached-report fast-path ─────────────────────────────────────
-    // Report is already available; animate through stages for the minimum
-    // display time, then hand off to the parent.
+    // ── Cached-report fast-path ──────────────────────────────────────
     if (cachedReport) {
       const steps: [number, AnalysisStage, string, string][] = [
         [200,  1, STAGES[0].label, STAGES[0].detail],
@@ -256,35 +283,24 @@ export function AnalysisJourney({
         [1600, 3, STAGES[2].label, STAGES[2].detail],
         [2300, 4, "Complete",      "Evidence authenticated."],
       ];
-
       const timers = steps.map(([delay, s, label, detail]) =>
-        setTimeout(() => {
-          setStage(s);
-          setStageLabel(label);
-          setStageDetail(detail);
-        }, delay),
+        setTimeout(() => { setStage(s); setStageLabel(label); setStageDetail(detail); }, delay),
       );
-
       const doneTimer = setTimeout(() => {
         if (!hasCompletedRef.current) {
           hasCompletedRef.current = true;
           onCompleteRef.current(cachedReport);
         }
       }, 2900);
-
-      return () => {
-        [...timers, doneTimer].forEach(clearTimeout);
-      };
+      return () => { [...timers, doneTimer].forEach(clearTimeout); };
     }
 
-    // ── Live SSE path ───────────────────────────────────────────────
+    // ── Live SSE path ────────────────────────────────────────────────
     fetchReportWithProgress(
       postUrl,
-      (progress) => {
-        const { stage: serverStage, message, progress: pct } = progress;
+      ({ stage: serverStage, message, progress: pct }) => {
         setStageLabel(serverStage === "starting" ? "Dispatched" : serverStage);
         setStageDetail(message);
-
         if (pct < 0.33) setStage(1);
         else if (pct < 0.66) setStage(2);
         else if (pct < 1) setStage(3);
@@ -293,14 +309,8 @@ export function AnalysisJourney({
       forceRefresh,
     )
       .then((report) => {
-        const hasContent = !!(
-          report.markdown && report.markdown.trim().length > 50
-        );
-
-        if (
-          report.corroboration.verdict === "insufficient_data" &&
-          !hasContent
-        ) {
+        const hasContent = !!(report.markdown && report.markdown.trim().length > 50);
+        if (report.corroboration.verdict === "insufficient_data" && !hasContent) {
           setError(
             report.corroboration.summary ||
               "Unable to locate the linked content. The URL may be inaccessible or require authentication.",
@@ -309,7 +319,6 @@ export function AnalysisJourney({
           hasCompletedRef.current = true;
           return;
         }
-
         if (!hasCompletedRef.current) {
           hasCompletedRef.current = true;
           setTimeout(() => onCompleteRef.current(report), 800);
@@ -321,10 +330,15 @@ export function AnalysisJourney({
       });
   }, [postUrl, forceRefresh, cachedReport]);
 
+  const planeTarget = PLANE_TARGETS[stage];
+
   return (
+    // height: clamp(440px, 38vw, 560px) tracks the SVG's natural aspect ratio
+    // (viewBox 1200×380 starting at top:15%) so there is no dead gradient below the hills.
     <div
-      className="min-h-screen w-full relative overflow-hidden"
+      className="w-full relative overflow-hidden"
       style={{
+        height: "clamp(440px, 38vw, 560px)",
         background: `linear-gradient(
           to bottom,
           var(--postal-sky-deep) 0%,
@@ -335,96 +349,8 @@ export function AnalysisJourney({
         )`,
       }}
     >
-      {/* Static paper plane — top-left sky */}
-      <div
-        className="absolute pointer-events-none"
-        style={{ top: "8%", left: "6%" }}
-      >
-        <PaperPlane className="w-28 h-auto drop-shadow-md opacity-90" />
-      </div>
-
-      {/* Landscape + Collection Boxes */}
-      <div className="absolute inset-x-0" style={{ top: "15%" }}>
-        <svg
-          viewBox="0 0 1200 380"
-          className="w-full"
-          preserveAspectRatio="xMidYMax meet"
-          aria-hidden
-        >
-          {/* Clouds */}
-          <Cloud cx={380} cy={20} scale={0.8} delay={3} />
-          <Cloud cx={800} cy={50} scale={1.0} delay={6} />
-          <Cloud cx={1050} cy={25} scale={0.7} delay={2} />
-          <Cloud cx={280} cy={70} scale={0.55} delay={9} />
-
-          {/* Rolling hills */}
-          <path
-            d="M0,220 C200,160 400,195 600,175 C800,150 1000,188 1200,170 L1200,380 L0,380 Z"
-            fill="var(--postal-green-far)"
-            opacity="0.65"
-          />
-          <path
-            d="M0,255 C150,215 350,240 550,228 C750,214 950,244 1200,232 L1200,380 L0,380 Z"
-            fill="var(--postal-green-mid)"
-            opacity="0.75"
-          />
-          {/* Dirt path */}
-          <path
-            d="M0,298 Q300,285 500,292 Q700,298 900,288 Q1050,280 1200,290"
-            fill="none"
-            stroke="var(--postal-path)"
-            strokeWidth="6"
-            opacity="0.5"
-          />
-          <path
-            d="M0,300 C100,285 300,295 500,290 C700,284 900,298 1200,292 L1200,380 L0,380 Z"
-            fill="var(--postal-green-near)"
-          />
-
-          {/* Collection Boxes
-              Each box is 96 wide × 130 tall.
-              The outer <g> carries the static SVG translate so that motion.g
-              only needs to animate scale — no coordinate conflict. */}
-          {STAGES.map((s, i) => {
-            const cx = (s.mailboxX / 100) * 1200;
-            const bx = cx - 48;
-            const by = 298 - 130; // ground line y≈298, box is 130 tall
-            const isActive = stage === i + 1;
-            const isPassed = stage > i + 1;
-
-            return (
-              <g key={i} transform={`translate(${bx}, ${by})`}>
-                <motion.g
-                  animate={{
-                    scale: isActive ? 1.1 : 1.0,
-                    // Use the resolved hex — CSS variables are not interpolatable
-                    // by the browser animation engine.
-                    filter: isActive
-                      ? `drop-shadow(0 0 12px ${POSTAL_BLUE_HEX})`
-                      : "drop-shadow(0 0 0px rgba(0,0,0,0))",
-                  }}
-                  transition={{ duration: 0.5, ease: EASE }}
-                  style={{
-                    // transform-box: fill-box makes transform-origin relative
-                    // to the element's own bounding box, not the SVG viewport.
-                    transformBox: "fill-box" as never,
-                    transformOrigin: "center",
-                  }}
-                >
-                  <CollectionBox
-                    active={isActive}
-                    passed={isPassed}
-                    label={s.label}
-                  />
-                </motion.g>
-              </g>
-            );
-          })}
-        </svg>
-      </div>
-
-      {/* Status card — top center */}
-      <div className="absolute top-6 left-1/2 -translate-x-1/2 text-center">
+      {/* Status card ── absolute overlay in the sky zone */}
+      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-10 text-center">
         <AnimatePresence mode="wait">
           {error ? (
             <motion.div
@@ -440,19 +366,13 @@ export function AnalysisJourney({
             >
               <p
                 className="text-lg font-bold"
-                style={{
-                  fontFamily: "var(--font-serif)",
-                  color: "var(--postal-ink)",
-                }}
+                style={{ fontFamily: "var(--font-serif)", color: "var(--postal-ink)" }}
               >
                 Unable to Trace Post
               </p>
               <p
                 className="text-sm text-center max-w-md"
-                style={{
-                  fontFamily: "var(--font-serif)",
-                  color: "var(--postal-ink-muted)",
-                }}
+                style={{ fontFamily: "var(--font-serif)", color: "var(--postal-ink-muted)" }}
               >
                 {error}
               </p>
@@ -463,7 +383,7 @@ export function AnalysisJourney({
                   color: "var(--postal-ink-muted)",
                   border: "1px solid var(--postal-ink-muted)",
                   background: "var(--postal-paper)",
-                  borderRadius: "2px",
+                  borderRadius: 0,
                   cursor: "pointer",
                 }}
                 onClick={onReset}
@@ -502,34 +422,121 @@ export function AnalysisJourney({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
               transition={{ duration: 0.4 }}
-              className="px-5 py-3 rounded-[2px] text-center"
+              className="px-5 py-3 text-center"
               style={{
                 background: "rgba(253,246,227,0.9)",
                 border: "1px solid var(--postal-ink-muted)",
                 backdropFilter: "blur(4px)",
+                borderRadius: 0,
               }}
             >
               <p
                 className="text-xs tracking-[0.2em] uppercase mb-0.5"
-                style={{
-                  fontFamily: "var(--font-serif)",
-                  color: "var(--postal-ink-muted)",
-                }}
+                style={{ fontFamily: "var(--font-serif)", color: "var(--postal-ink-muted)" }}
               >
                 {stageLabel}
               </p>
               <p
                 className="text-sm italic"
-                style={{
-                  fontFamily: "var(--font-serif)",
-                  color: "var(--postal-ink)",
-                }}
+                style={{ fontFamily: "var(--font-serif)", color: "var(--postal-ink)" }}
               >
                 {stageDetail}
               </p>
             </motion.div>
           )}
         </AnimatePresence>
+      </div>
+
+      {/* Landscape SVG ── everything in one coordinate system */}
+      <div className="absolute inset-x-0" style={{ top: "15%" }}>
+        <svg
+          viewBox="0 0 1200 380"
+          className="w-full"
+          preserveAspectRatio="xMidYMax meet"
+          aria-hidden
+        >
+          {/* Clouds */}
+          <Cloud cx={380} cy={20} scale={0.8} delay={3} />
+          <Cloud cx={800} cy={50} scale={1.0} delay={6} />
+          <Cloud cx={1050} cy={25} scale={0.7} delay={2} />
+          <Cloud cx={280} cy={70} scale={0.55} delay={9} />
+
+          {/* Animated paper plane ─────────────────────────────────────
+              Outer motion.g: slides horizontally (and slightly vertically)
+              to the target position as `stage` changes.
+              Inner motion.g: repeating y-bob for a floating effect.       */}
+          <motion.g
+            animate={{ x: planeTarget.x, y: planeTarget.y }}
+            transition={{ duration: 1.1, ease: EASE_OUT }}
+          >
+            <motion.g
+              animate={
+                stage < 4
+                  ? { y: [0, -10, 0] }
+                  : { y: 0 }
+              }
+              transition={
+                stage < 4
+                  ? { duration: 2.6, repeat: Infinity, ease: "easeInOut", repeatType: "loop" }
+                  : { duration: 0.3 }
+              }
+            >
+              <PlaneShape />
+            </motion.g>
+          </motion.g>
+
+          {/* Rolling hills */}
+          <path
+            d="M0,220 C200,160 400,195 600,175 C800,150 1000,188 1200,170 L1200,380 L0,380 Z"
+            fill="var(--postal-green-far)"
+            opacity="0.65"
+          />
+          <path
+            d="M0,255 C150,215 350,240 550,228 C750,214 950,244 1200,232 L1200,380 L0,380 Z"
+            fill="var(--postal-green-mid)"
+            opacity="0.75"
+          />
+          {/* Dirt path */}
+          <path
+            d="M0,298 Q300,285 500,292 Q700,298 900,288 Q1050,280 1200,290"
+            fill="none"
+            stroke="var(--postal-path)"
+            strokeWidth="6"
+            opacity="0.5"
+          />
+          <path
+            d="M0,300 C100,285 300,295 500,290 C700,284 900,298 1200,292 L1200,380 L0,380 Z"
+            fill="var(--postal-green-near)"
+          />
+
+          {/* Collection Boxes
+              Outer <g>: static SVG translate for position.
+              Inner motion.g: animated scale + glow, isolated from the translate. */}
+          {STAGES.map((s, i) => {
+            const cx = (s.mailboxX / 100) * 1200;
+            const bx = cx - 48;
+            const by = 298 - 130; // BOX_TOP_Y = 168
+            const isActive = stage === i + 1;
+            const isPassed = stage > i + 1;
+
+            return (
+              <g key={i} transform={`translate(${bx}, ${by})`}>
+                <motion.g
+                  animate={{
+                    scale: isActive ? 1.1 : 1.0,
+                    filter: isActive
+                      ? `drop-shadow(0 0 12px ${POSTAL_BLUE_HEX})`
+                      : "drop-shadow(0 0 0px rgba(0,0,0,0))",
+                  }}
+                  transition={{ duration: 0.5, ease: EASE }}
+                  style={{ transformBox: "fill-box" as never, transformOrigin: "center" }}
+                >
+                  <CollectionBox active={isActive} passed={isPassed} label={s.label} />
+                </motion.g>
+              </g>
+            );
+          })}
+        </svg>
       </div>
     </div>
   );
