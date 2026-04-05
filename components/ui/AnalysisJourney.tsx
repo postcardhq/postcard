@@ -263,7 +263,7 @@ export function AnalysisJourney({
   const [stageLabel, setStageLabel] = useState("Dispatched");
   const [stageDetail, setStageDetail] = useState("Evidence en route…");
   const [error, setError] = useState<string | null>(null);
-  const [isInsufficientData, setIsInsufficientData] = useState(false);
+  const [failedReport, setFailedReport] = useState<PostcardReport | null>(null);
   const pendingReport = useRef<PostcardReport | null>(null);
   const onCompleteRef = useRef(onComplete);
   const hasCompletedRef = useRef(false);
@@ -290,6 +290,7 @@ export function AnalysisJourney({
             report.corroboration.summary ||
               "Unable to locate the linked content. The URL may be inaccessible or require authentication.",
           );
+          setFailedReport(report);
           if (!hasCompletedRef.current) {
             hasCompletedRef.current = true;
           }
@@ -448,8 +449,32 @@ export function AnalysisJourney({
                 }}
                 onClick={onReset}
               >
-                Try Again
+                Try Another Post
               </button>
+
+              {failedReport?.ocr?.markdown && (
+                <div className="w-full mt-2 text-left">
+                  <p
+                    className="mb-1.5 text-[9px] tracking-widest uppercase"
+                    style={{ color: "var(--postal-ink-faint)" }}
+                  >
+                    Result from Jina Reader
+                  </p>
+                  <pre
+                    className="text-[10px] leading-relaxed whitespace-pre-wrap overflow-y-auto"
+                    style={{
+                      fontFamily: "var(--font-serif)",
+                      color: "var(--postal-ink-muted)",
+                      background: "rgba(0,0,0,0.03)",
+                      border: "1px dashed var(--postal-ink-faint)",
+                      padding: "0.75rem",
+                      maxHeight: "150px",
+                    }}
+                  >
+                    {failedReport.ocr.markdown}
+                  </pre>
+                </div>
+              )}
             </motion.div>
           )}
 

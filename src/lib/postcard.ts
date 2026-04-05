@@ -7,6 +7,7 @@ import { extractPostcard } from "./vision/ocr";
 import { navigateToSource } from "./agents/navigator";
 import { auditPostcard } from "./agents/verifier";
 import { corroboratePostcard } from "./agents/corroborator";
+import { fetcher as unifiedFetcher } from "./ingest";
 
 export type ProgressCallback = (
   stage: string,
@@ -215,151 +216,151 @@ export async function processPostcardFromUrl(
     console.error("Cache lookup error:", cacheError);
   }
 
-  progress("scraping", "Fetching content via Jina Reader...", 0.1);
-  const jinaResponse = await fetch(
-    `https://r.jina.ai/${encodeURIComponent(url)}`,
-  );
-  if (!jinaResponse.ok) {
-    throw new Error(`Jina Reader failed: ${jinaResponse.status}`);
-  }
-  const markdown = await jinaResponse.text();
-
-  const BLOCKING_PATTERNS = [
-    "log in with facebook",
-    "log in to continue",
-    "sign up to see",
-    "create an account",
-    "this content is not available",
-    "content isn't available",
-    "rate limit",
-    "access denied",
-    "forbidden",
-    "blocked",
-    "oembed error",
-  ];
-
-  const isBlocked = BLOCKING_PATTERNS.some((pattern) =>
-    markdown.toLowerCase().includes(pattern),
-  );
-
-  const isMostlyLoginPage =
-    markdown.toLowerCase().includes("log into instagram") &&
-    (markdown.toLowerCase().includes("mobile number") ||
-      markdown.toLowerCase().includes("password"));
-
-  if (
-    !markdown ||
-    markdown.trim().length < 50 ||
-    isBlocked ||
-    isMostlyLoginPage
-  ) {
-    return {
-      url,
-      markdown: "",
-      platform: inferPlatform(url),
-      corroboration: {
-        primarySources: [],
-        queriesExecuted: [],
-        verdict: "insufficient_data" as const,
-        summary:
-          "Unable to access this content. The link may require login or may be restricted.",
-        confidenceScore: 0,
-        corroborationLog: [
-          isBlocked || isMostlyLoginPage
-            ? "Jina Reader was blocked by the platform."
-            : "Jina Reader returned insufficient content for analysis.",
-        ],
-      },
-      postcardScore: 0,
-      timestamp: new Date().toISOString(),
-    };
-  }
-
-  progress("scraped", `Fetched ${markdown.length} characters`, 0.3);
-
-  const platform = inferPlatform(url);
-  progress("corroborating", "Searching for primary sources...", 0.4);
-
-  const postcard: import("./vision/ocr").Postcard = {
-    platform: platform as "X" | "YouTube" | "Reddit" | "Instagram" | "Other",
-    username: undefined,
-    timestampText: undefined,
-    mainText: markdown.slice(0, 500),
-  };
-
-  const corroboration = await corroboratePostcard(
-    postcard,
-    markdown,
-    (msg: string) => {
-      progress("corroborating", msg, 0.5);
-    },
-  );
-
-  progress("scoring", "Calculating Postcard score...", 0.9);
-
-  const postcardScore =
-    0.7 * corroboration.confidenceScore +
-    (0.3 *
-      corroboration.primarySources.filter(
-        (s: { relevance: string }) => s.relevance === "supporting",
-      ).length) /
-      Math.max(corroboration.primarySources.length, 1);
-
   try {
-    const existingPost = await db
-      .select()
-      .from(posts)
-      .where(eq(posts.url, url))
-      .limit(1);
+    progress("scraping", "Fetching content via FetcherStrategy...", 0.1);
+    const post = await unifiedFetcher.fetch(url);
+    const markdown = post.markdown;
 
-    if (existingPost.length > 0) {
-      await db
-        .update(analyses)
-        .set({ hits: sql`hits + 1` })
-        .where(eq(analyses.postId, existingPost[0].id));
-    } else {
-      const postId = crypto.randomUUID();
-      await db.insert(posts).values({
-        id: postId,
-        url,
-        platform,
-        markdown,
-        mainText: markdown.slice(0, 500),
-      });
+    const BLOCKING_PATTERNS = [
+      "log in with facebook",
+      "log in to continue",
+      "sign up to see",
+      "create an account",
+      "this content is not available",
+      "content isn't available",
+      "rate limit",
+      "access denied",
+      "forbidden",
+      "blocked",
+      "oembed error",
+    ];
 
-      await db.insert(analyses).values({
-        id: crypto.randomUUID(),
-        postId,
+    const isBlocked = BLOCKING_PATTERNS.some((pattern) =>
+      markdown.toLowerCase().includes(pattern),
+    );
+
+    const isMostlyLoginPage =
+      markdown.toLowerCase().includes("log into instagram") &&
+      (markdown.toLowerCase().includes("mobile number") ||
+        markdown.toLowerCase().includes("password"));
+
+    if (
+      !markdown ||
+      markdown.trim().length < 50 ||
+      isBlocked ||
+      isMostlyLoginPage
+    ) {
+      return {
         url,
-        platform,
-        postcardScore,
-        originScore: 0.5,
-        corroborationScore: corroboration.confidenceScore,
-        biasScore: 0.5,
-        temporalScore: 0.5,
-        verdict: corroboration.verdict,
-        summary: corroboration.summary,
-        confidenceScore: corroboration.confidenceScore,
-        primarySources: JSON.stringify(corroboration.primarySources),
-        queriesExecuted: JSON.stringify(corroboration.queriesExecuted),
-        corroborationLog: JSON.stringify(corroboration.corroborationLog),
-        status: "completed",
-      });
+        markdown: markdown || "",
+        platform: post.platform || inferPlatform(url),
+        corroboration: {
+          primarySources: [],
+          queriesExecuted: [],
+          verdict: "insufficient_data" as const,
+          summary:
+            "Unable to access this content. The link may require login or may be restricted.",
+          confidenceScore: 0,
+          corroborationLog: [
+            isBlocked || isMostlyLoginPage
+              ? "The platform blocked data ingestion."
+              : "Insufficient content was returned for a forensic audit.",
+          ],
+        },
+        postcardScore: 0,
+        timestamp: new Date().toISOString(),
+      };
     }
-  } catch (dbError) {
-    console.error("Database error:", dbError);
+
+    progress("scraped", `Fetched ${markdown.length} characters`, 0.3);
+
+    const platform = post.platform || inferPlatform(url);
+    progress("corroborating", "Searching for primary sources...", 0.4);
+
+    const postcard: import("./vision/ocr").Postcard = {
+      platform: platform as "X" | "YouTube" | "Reddit" | "Instagram" | "Other",
+      username: undefined,
+      timestampText: undefined,
+      mainText: markdown.slice(0, 500),
+    };
+
+    const corroboration = await corroboratePostcard(
+      postcard,
+      markdown,
+      (msg: string) => {
+        progress("corroborating", msg, 0.5);
+      },
+    );
+
+    progress("scoring", "Calculating Postcard score...", 0.9);
+
+    const postcardScore =
+      0.7 * corroboration.confidenceScore +
+      (0.3 *
+        corroboration.primarySources.filter(
+          (s: { relevance: string }) => s.relevance === "supporting",
+        ).length) /
+        Math.max(corroboration.primarySources.length, 1);
+
+    try {
+      const existingPost = await db
+        .select()
+        .from(posts)
+        .where(eq(posts.url, url))
+        .limit(1);
+
+      if (existingPost.length > 0) {
+        await db
+          .update(analyses)
+          .set({ hits: sql`hits + 1` })
+          .where(eq(analyses.postId, existingPost[0].id));
+      } else {
+        const postId = crypto.randomUUID();
+        await db.insert(posts).values({
+          id: postId,
+          url,
+          platform,
+          markdown,
+          mainText: markdown.slice(0, 500),
+        });
+
+        await db.insert(analyses).values({
+          id: crypto.randomUUID(),
+          postId,
+          url,
+          platform,
+          postcardScore,
+          originScore: 0.5,
+          corroborationScore: corroboration.confidenceScore,
+          biasScore: 0.5,
+          temporalScore: 0.5,
+          verdict: corroboration.verdict,
+          summary: corroboration.summary,
+          confidenceScore: corroboration.confidenceScore,
+          primarySources: JSON.stringify(corroboration.primarySources),
+          queriesExecuted: JSON.stringify(corroboration.queriesExecuted),
+          corroborationLog: JSON.stringify(corroboration.corroborationLog),
+          status: "completed",
+        });
+      }
+    } catch (dbError) {
+      console.error("Database error:", dbError);
+    }
+
+    progress("complete", "Postcard complete", 1);
+
+    return PostcardResponseSchema.parse({
+      url,
+      markdown,
+      platform,
+      corroboration,
+      postcardScore,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("Scraping error:", error);
+    throw error;
   }
-
-  progress("complete", "Postcard complete", 1);
-
-  return PostcardResponseSchema.parse({
-    url,
-    markdown,
-    platform,
-    corroboration,
-    postcardScore,
-    timestamp: new Date().toISOString(),
-  });
 }
 
 function inferPlatform(url: string): string {
