@@ -5,6 +5,16 @@ import { motion, AnimatePresence } from "motion/react";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
+const PLACEHOLDER_URLS = [
+  "https://x.com/user/status/1234567890",
+  "https://twitter.com/user/status/1234567890",
+  "https://bsky.app/profile/user.bsky.social/post/abc123",
+  "https://www.instagram.com/p/ABC123/",
+  "https://www.reddit.com/r/programming/comments/abc123/",
+  "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+  "https://threads.net/@user/post/1234567890",
+] as const;
+
 /* ── SVG paper airplane ───────────────────────────── */
 function PaperPlane({ className = "" }: { className?: string }) {
   return (
@@ -53,6 +63,38 @@ function PaperPlane({ className = "" }: { className?: string }) {
         opacity="0.35"
       />
     </svg>
+  );
+}
+
+function AnimatedPlaceholder() {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIndex((prev) => (prev + 1) % PLACEHOLDER_URLS.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <AnimatePresence mode="wait">
+      <motion.span
+        key={index}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.5 }}
+        style={{
+          position: "absolute",
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: "100%",
+          textAlign: "center",
+        }}
+      >
+        {PLACEHOLDER_URLS[index]}
+      </motion.span>
+    </AnimatePresence>
   );
 }
 
@@ -313,6 +355,7 @@ export function DropZone({
   const [animating, setAnimating] = useState(false);
   const [postUrl, setPostUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isFocused, setIsFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = useCallback(async (url: string) => {
@@ -399,31 +442,50 @@ export function DropZone({
             />
 
             <div className="m-6 flex flex-col items-center">
-              <input
-                ref={inputRef}
-                type="url"
-                placeholder="https://x.com/user/status/1234567890"
-                className="w-full max-w-sm px-4 py-3 text-sm text-center"
+              <div
+                className="relative w-full max-w-sm"
                 style={{
-                  fontFamily: "var(--font-serif)",
-                  color: "var(--postal-ink)",
                   background: "var(--postal-paper-2)",
                   border: "1px solid var(--postal-ink-faint)",
                   borderRadius: "2px",
-                  outline: "none",
                 }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = "var(--postal-ink)";
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = "var(--postal-ink-faint)";
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    handleSubmit(e.currentTarget.value);
-                  }
-                }}
-              />
+              >
+                <input
+                  ref={inputRef}
+                  type="url"
+                  className="w-full px-4 py-3 text-sm text-center bg-transparent"
+                  style={{
+                    fontFamily: "var(--font-serif)",
+                    color: "var(--postal-ink)",
+                    outline: "none",
+                  }}
+                  onFocus={(e) => {
+                    setIsFocused(true);
+                    e.currentTarget.style.borderColor = "var(--postal-ink)";
+                  }}
+                  onBlur={(e) => {
+                    setIsFocused(false);
+                    e.currentTarget.style.borderColor =
+                      "var(--postal-ink-faint)";
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleSubmit(e.currentTarget.value);
+                    }
+                  }}
+                />
+                {!isFocused && (
+                  <div
+                    className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                    style={{
+                      background: "var(--postal-paper-2)",
+                      borderRadius: "2px",
+                    }}
+                  >
+                    <AnimatedPlaceholder />
+                  </div>
+                )}
+              </div>
 
               <button
                 type="button"

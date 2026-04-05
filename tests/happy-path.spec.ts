@@ -3,9 +3,8 @@ import { test, expect } from "@playwright/test";
 test("happy path: submit post URL and see results", async ({ page }) => {
   const testUrl =
     "https://www.reddit.com/r/conspiracy/comments/1rmd9ef/dolphinsaliens/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button";
-  // Test case: "dolphins/aliens" conspiracy post on Reddit - easier to fetch via Jina Reader than Instagram
 
-  await page.goto("http://localhost:3000");
+  await page.goto("http://localhost:3000/verify");
 
   await expect(page.getByRole("heading", { name: "Postcard" })).toBeVisible();
 
