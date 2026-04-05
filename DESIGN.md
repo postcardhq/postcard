@@ -95,6 +95,8 @@ const TotalScore =
 
 Postcard follows **Google AIP-121** (Resource-Oriented Design) and **AIP-122** (Standard Methods).
 
+For the complete API reference with examples, see **[docs/API.md](../docs/API.md)**.
+
 ### Endpoints
 
 | Method   | Path                  | Description                                                                                     |
