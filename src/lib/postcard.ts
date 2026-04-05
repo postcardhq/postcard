@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { analyses, posts } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { corroboratePostcard } from "./agents/corroborator";
+import { auditPostcard } from "./agents/verifier";
 import { unifiedPostClient } from "./ingest";
 import { normalizePostUrl } from "./url";
 
@@ -244,8 +245,8 @@ export async function processPostcardFromUrl(
 
     const postcard: Postcard = {
       platform: platform as Postcard["platform"],
-      username: undefined,
-      timestampText: undefined,
+      username: post.author,
+      timestampText: post.timestamp?.toISOString(),
       mainText: markdown.slice(0, 500),
     };
 
@@ -257,15 +258,34 @@ export async function processPostcardFromUrl(
       },
     );
 
+    progress("auditing", "Verifying origin and temporal alignment...", 0.7);
+    const audit = await auditPostcard(normalizedUrl, postcard);
+
+    const corroborationScore = corroboration.confidenceScore;
+    const supportingSources = corroboration.primarySources.filter(
+      (s: { relevance: string }) => s.relevance === "supporting",
+    ).length;
+    const totalSources = corroboration.primarySources.length;
+    const biasScore = totalSources > 0 ? supportingSources / totalSources : 0.5;
+
     progress("scoring", "Calculating Postcard score...", 0.9);
 
+    const WEIGHTS = {
+      ORIGIN: 0.3,
+      CORROBORATION: 0.25,
+      BIAS: 0.25,
+      TEMPORAL: 0.2,
+    };
+
     const postcardScore =
-      0.7 * corroboration.confidenceScore +
-      (0.3 *
-        corroboration.primarySources.filter(
-          (s: { relevance: string }) => s.relevance === "supporting",
-        ).length) /
-        Math.max(corroboration.primarySources.length, 1);
+      audit.originScore * WEIGHTS.ORIGIN +
+      corroborationScore * WEIGHTS.CORROBORATION +
+      biasScore * WEIGHTS.BIAS +
+      audit.temporalScore * WEIGHTS.TEMPORAL;
+
+    const triangulationQueries = corroboration.queriesExecuted.map(
+      (q) => q.query,
+    );
 
     try {
       const existingPost = await db
@@ -299,19 +319,20 @@ export async function processPostcardFromUrl(
             .update(analyses)
             .set({
               postcardScore,
-              originScore: 0.5,
+              originScore: audit.originScore,
               corroborationScore: corroboration.confidenceScore,
-              biasScore: 0.5,
-              temporalScore: 0.5,
+              biasScore,
+              temporalScore: audit.temporalScore,
               verdict: corroboration.verdict,
               summary: corroboration.summary,
               confidenceScore: corroboration.confidenceScore,
               primarySources: JSON.stringify(corroboration.primarySources),
               queriesExecuted: JSON.stringify(corroboration.queriesExecuted),
               corroborationLog: JSON.stringify(corroboration.corroborationLog),
+              auditLog: JSON.stringify(audit.auditLog),
               status: "completed",
               updatedAt: new Date(),
-              createdAt: new Date(), // Reset creation time on full re-eval
+              createdAt: new Date(),
             })
             .where(eq(analyses.id, existingAnalysis[0].id));
         } else {
@@ -321,16 +342,17 @@ export async function processPostcardFromUrl(
             url: normalizedUrl,
             platform,
             postcardScore,
-            originScore: 0.5,
+            originScore: audit.originScore,
             corroborationScore: corroboration.confidenceScore,
-            biasScore: 0.5,
-            temporalScore: 0.5,
+            biasScore,
+            temporalScore: audit.temporalScore,
             verdict: corroboration.verdict,
             summary: corroboration.summary,
             confidenceScore: corroboration.confidenceScore,
             primarySources: JSON.stringify(corroboration.primarySources),
             queriesExecuted: JSON.stringify(corroboration.queriesExecuted),
             corroborationLog: JSON.stringify(corroboration.corroborationLog),
+            auditLog: JSON.stringify(audit.auditLog),
             status: "completed",
           });
         }
@@ -350,16 +372,17 @@ export async function processPostcardFromUrl(
           url: normalizedUrl,
           platform,
           postcardScore,
-          originScore: 0.5,
+          originScore: audit.originScore,
           corroborationScore: corroboration.confidenceScore,
-          biasScore: 0.5,
-          temporalScore: 0.5,
+          biasScore,
+          temporalScore: audit.temporalScore,
           verdict: corroboration.verdict,
           summary: corroboration.summary,
           confidenceScore: corroboration.confidenceScore,
           primarySources: JSON.stringify(corroboration.primarySources),
           queriesExecuted: JSON.stringify(corroboration.queriesExecuted),
           corroborationLog: JSON.stringify(corroboration.corroborationLog),
+          auditLog: JSON.stringify(audit.auditLog),
           status: "completed",
         });
       }
@@ -381,6 +404,28 @@ export async function processPostcardFromUrl(
         postcardScore,
         timestamp: new Date().toISOString(),
         analysisId: aId,
+        forensicReport: {
+          postcard: {
+            platform: platform as Postcard["platform"],
+            mainText: markdown.slice(0, 500),
+            username: postcard.username,
+            timestampText: postcard.timestampText,
+          },
+          markdown,
+          triangulation: {
+            targetUrl: normalizedUrl,
+            queries: triangulationQueries,
+          },
+          audit: {
+            originScore: audit.originScore,
+            temporalScore: audit.temporalScore,
+            totalScore: postcardScore,
+            auditLog: audit.auditLog,
+          },
+          corroboration,
+          timestamp: new Date().toISOString(),
+          analysisId: aId,
+        },
       });
     } catch (dbError) {
       console.error("Database error:", dbError);
@@ -393,6 +438,27 @@ export async function processPostcardFromUrl(
       corroboration,
       postcardScore,
       timestamp: new Date().toISOString(),
+      forensicReport: {
+        postcard: {
+          platform: platform as Postcard["platform"],
+          mainText: markdown.slice(0, 500),
+          username: postcard.username,
+          timestampText: postcard.timestampText,
+        },
+        markdown,
+        triangulation: {
+          targetUrl: url,
+          queries: triangulationQueries,
+        },
+        audit: {
+          originScore: audit.originScore,
+          temporalScore: audit.temporalScore,
+          totalScore: postcardScore,
+          auditLog: audit.auditLog,
+        },
+        corroboration,
+        timestamp: new Date().toISOString(),
+      },
     });
   } catch (error) {
     console.error("Trace error:", error);

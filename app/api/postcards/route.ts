@@ -64,6 +64,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     if (existing) {
       const { analyses: analysis, posts: post } = existing;
+      const queriesExecuted = JSON.parse(
+        (analysis.queriesExecuted as string) || "[]",
+      ) as Array<{ query: string }>;
       const report = {
         postcard: {
           platform: analysis.platform,
@@ -74,7 +77,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         markdown: post.markdown || "",
         triangulation: {
           targetUrl: analysis.url,
-          queries: [],
+          queries: queriesExecuted.map((q) => q.query),
         },
         audit: {
           originScore: analysis.originScore || 0,
@@ -86,9 +89,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           primarySources: JSON.parse(
             (analysis.primarySources as string) || "[]",
           ),
-          queriesExecuted: JSON.parse(
-            (analysis.queriesExecuted as string) || "[]",
-          ),
+          queriesExecuted,
           verdict: analysis.verdict as Corroboration["verdict"],
           summary: analysis.summary || "",
           confidenceScore: analysis.confidenceScore || 0,
@@ -188,36 +189,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           forceRefresh,
         );
 
-        // Build forensic report from URL-based response
-        const forensicReport = {
-          postcard: {
-            platform: report.platform,
-            mainText: report.markdown.slice(0, 500),
-          },
-          markdown: report.markdown,
-          triangulation: {
-            targetUrl: report.url,
-            queries: [],
-          },
-          audit: {
-            originScore: 0.5,
-            temporalScore: 0.5,
-            totalScore: 0.5, // 50/50 Origin and Temporal
-            auditLog: [
-              "Analysis initiated via direct URL submission",
-              "Skipping visual consistency audit (no source image provided)",
-              "Origin reputation based on platform ingestion client metrics",
-              `Direct source verification: ${report.url}`,
-            ],
-          },
-          corroboration: report.corroboration,
-          timestamp: report.timestamp,
-          analysisId: report.analysisId,
-        };
-
         send("complete", {
           postcard: report,
-          forensicReport,
+          forensicReport: report.forensicReport,
         });
       } catch (error) {
         send("error", {

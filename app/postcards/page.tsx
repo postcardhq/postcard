@@ -76,6 +76,9 @@ export default async function PostcardsPage({ searchParams }: Props) {
     const data = await getAnalysisByUrl(normalizedUrl);
     if (data) {
       const { analyses: analysis, posts: post } = data;
+      const queriesExecuted = JSON.parse(
+        (analysis.queriesExecuted as string) || "[]",
+      ) as Array<{ query: string; sourcesFound: number }>;
       initialReport = {
         postcard: {
           platform:
@@ -92,7 +95,7 @@ export default async function PostcardsPage({ searchParams }: Props) {
         markdown: post.markdown || "",
         triangulation: {
           targetUrl: analysis.url,
-          queries: [],
+          queries: queriesExecuted.map((q) => q.query),
         },
         audit: {
           originScore: analysis.originScore || 0,
@@ -104,9 +107,7 @@ export default async function PostcardsPage({ searchParams }: Props) {
           primarySources: JSON.parse(
             (analysis.primarySources as string) || "[]",
           ),
-          queriesExecuted: JSON.parse(
-            (analysis.queriesExecuted as string) || "[]",
-          ),
+          queriesExecuted,
           verdict:
             (analysis.verdict as
               | "verified"
