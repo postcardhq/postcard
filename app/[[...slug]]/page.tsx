@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { analyses, posts } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { normalizePostUrl, reconstructUrlFromSlug } from "@/src/lib/url";
-import PostcardHomeClient from "@/components/ui/PostcardHomeClient";
+import PostcardHomeClient from "@/components/ui/postcard-home-client";
 import type { PostcardReport, Corroboration } from "@/src/lib/postcard";
 import type { Metadata } from "next";
 

@@ -3,8 +3,8 @@
 import { motion } from "motion/react";
 import Link from "next/link";
 import { ArrowRight } from "@phosphor-icons/react";
-import { LandingHook } from "@/components/ui/LandingHook";
-import { Footer } from "@/components/ui/Footer";
+import { LandingHook } from "@/components/ui/landing-hook";
+import { Footer } from "@/components/ui/footer";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -23,7 +23,11 @@ export default function Home() {
       <LandingHook />
 
       {/* ── Airmail divider ── */}
-      <div className="h-2" style={{ backgroundImage: AIRMAIL_BG }} aria-hidden="true" />
+      <div
+        className="h-2"
+        style={{ backgroundImage: AIRMAIL_BG }}
+        aria-hidden="true"
+      />
 
       {/* ── Call to action ── */}
       <section

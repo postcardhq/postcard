@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Hero } from "@/components/ui/Hero";
-import { DropZone } from "@/components/ui/DropZone";
-import { AnalysisJourney } from "@/components/ui/AnalysisJourney";
+import { Hero } from "@/components/ui/hero";
+import { DropZone } from "@/components/ui/drop-zone";
+import { AnalysisJourney } from "@/components/ui/analysis-journey";
 import { ForensicReport } from "@/src/components/forensics/forensic-report";
 import type { PostcardReport } from "@/src/lib/postcard";
 
