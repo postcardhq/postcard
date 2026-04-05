@@ -1,51 +1,48 @@
-import { useState, useCallback, useEffect, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+"use client";
+
+import { useState, useCallback, useEffect } from "react";
 import { Hero } from "@/components/ui/Hero";
 import { DropZone } from "@/components/ui/DropZone";
 import { AnalysisJourney } from "@/components/ui/AnalysisJourney";
 import { ForensicReport } from "@/src/components/forensics/forensic-report";
 import type { PostcardReport } from "@/src/lib/postcard";
+import { useSearchParams, useRouter } from "next/navigation";
+import { normalizePostUrl } from "@/src/lib/url";
+
+interface Props {
+  initialUrl: string | null;
+  initialReport: PostcardReport | null;
+}
 
 type PageStage = "upload" | "analyzing" | "results";
 
-export default function PostcardHome() {
-  return (
-    <Suspense fallback={<div>Loading Forensic Core...</div>}>
-      <PostcardHomeContent />
-    </Suspense>
-  );
-}
-
-function PostcardHomeContent() {
-  const [pageStage, setPageStage] = useState<PageStage>("upload");
-  const [postUrl, setPostUrl] = useState<string | null>(null);
-  const [report, setReport] = useState<PostcardReport | null>(null);
+export default function PostcardHomeClient({ initialUrl, initialReport }: Props) {
+  const [pageStage, setPageStage] = useState<PageStage>(initialUrl ? (initialReport ? "results" : "analyzing") : "upload");
+  const [postUrl] = useState<string | null>(initialUrl);
+  const [report, setReport] = useState<PostcardReport | null>(initialReport);
   const [forceRefresh, setForceRefresh] = useState(false);
 
   const searchParams = useSearchParams();
   const router = useRouter();
 
   useEffect(() => {
-    const urlParam = searchParams.get("url");
-    const refreshParam = searchParams.get("forceRefresh") === "true";
-
-    if (urlParam) {
+    // Check if we just landed on a fresh URL or a refresh
+    const isRefresh = searchParams.get("forceRefresh") === "true";
+    if (isRefresh) {
       setTimeout(() => {
-        setPostUrl(urlParam);
-        setForceRefresh(refreshParam);
+        setForceRefresh(true);
         setPageStage("analyzing");
       }, 0);
-      // Clear params to avoid loop on refresh
-      router.replace("/", { scroll: false });
+      // Strip refresh param
+      router.replace(window.location.pathname, { scroll: false });
     }
   }, [searchParams, router]);
 
   const handleUrlSubmitted = useCallback((url: string) => {
-    setPostUrl(url);
-    setForceRefresh(false);
-    setReport(null);
-    setPageStage("analyzing");
-  }, []);
+    const normalized = normalizePostUrl(url);
+    // Hard redirect to the new "One Right Way" URL
+    router.push(`/${normalized}`);
+  }, [router]);
 
   const handleReportReady = useCallback((r: PostcardReport) => {
     setReport(r);
@@ -53,10 +50,8 @@ function PostcardHomeContent() {
   }, []);
 
   const handleReset = useCallback(() => {
-    setPostUrl(null);
-    setReport(null);
-    setPageStage("upload");
-  }, []);
+    router.push("/");
+  }, [router]);
 
   if (pageStage === "analyzing" && postUrl) {
     return (

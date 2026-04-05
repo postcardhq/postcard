@@ -13,10 +13,7 @@ import {
   ArrowsClockwise,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
-import type {
-  PostcardReport,
-  Corroboration,
-} from "@/src/lib/postcard";
+import type { PostcardReport, Corroboration } from "@/src/lib/postcard";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -360,10 +357,7 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
 
           <TimelineNode
             icon={
-              <MapPin
-                size={13}
-                style={{ color: "var(--postal-ink-muted)" }}
-              />
+              <MapPin size={13} style={{ color: "var(--postal-ink-muted)" }} />
             }
             label="Origin"
           >
@@ -546,27 +540,29 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
             label="Corroboration Trace"
           >
             <div className="flex flex-col gap-1.5">
-              {corroboration.corroborationLog.map((entry: string, i: number) => (
-                <div key={i} className="flex items-start gap-2">
-                  <span
-                    className="mt-px shrink-0 px-1 text-[9px] leading-tight text-center tabular-nums"
-                    style={{
-                      background: "var(--postal-blue-faint)",
-                      color: "var(--postal-blue)",
-                      border: "1px solid var(--postal-blue-faint)",
-                      minWidth: "20px",
-                    }}
-                  >
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                  <p
-                    className="text-xs leading-relaxed"
-                    style={{ color: "var(--postal-ink-muted)" }}
-                  >
-                    {entry}
-                  </p>
-                </div>
-              ))}
+              {corroboration.corroborationLog.map(
+                (entry: string, i: number) => (
+                  <div key={i} className="flex items-start gap-2">
+                    <span
+                      className="mt-px shrink-0 px-1 text-[9px] leading-tight text-center tabular-nums"
+                      style={{
+                        background: "var(--postal-blue-faint)",
+                        color: "var(--postal-blue)",
+                        border: "1px solid var(--postal-blue-faint)",
+                        minWidth: "20px",
+                      }}
+                    >
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    <p
+                      className="text-xs leading-relaxed"
+                      style={{ color: "var(--postal-ink-muted)" }}
+                    >
+                      {entry}
+                    </p>
+                  </div>
+                ),
+              )}
             </div>
           </TimelineNode>
 
@@ -651,7 +647,7 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
               background: "var(--postal-paper)",
             }}
             onClick={async () => {
-              const url = `${window.location.origin}/reports/${report.analysisId}`;
+              const url = `${window.location.origin}/${report.triangulation.targetUrl}`;
               await navigator.clipboard.writeText(url);
               alert("Share link copied to clipboard!");
             }}

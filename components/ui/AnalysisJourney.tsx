@@ -322,7 +322,7 @@ export function AnalysisJourney({
         setError(err instanceof Error ? err.message : "Analysis failed");
         console.error("Analysis failed:", err);
       });
-  }, [postUrl]);
+  }, [postUrl, forceRefresh]);
 
   const planeX =
     stage === 0

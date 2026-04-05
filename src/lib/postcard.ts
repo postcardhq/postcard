@@ -4,6 +4,7 @@ import { analyses, posts } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { corroboratePostcard } from "./agents/corroborator";
 import { unifiedPostClient } from "./ingest";
+import { normalizePostUrl } from "./url";
 
 export type ProgressCallback = (
   stage: string,
@@ -153,6 +154,7 @@ export async function processPostcardFromUrl(
   onProgress?: ProgressCallback,
   forceRefresh?: boolean,
 ): Promise<PostcardResponse & { analysisId?: string }> {
+  const normalizedUrl = normalizePostUrl(url);
   const progress = (stage: string, message: string, p: number) => {
     onProgress?.(stage, message, p);
   };
@@ -167,7 +169,7 @@ export async function processPostcardFromUrl(
       const cachedAnalysis = await db
         .select()
         .from(analyses)
-        .innerJoin(posts, eq(posts.url, url))
+        .innerJoin(posts, eq(posts.url, normalizedUrl))
         .orderBy(sql`${analyses.createdAt} DESC`)
         .limit(1);
 
@@ -179,16 +181,24 @@ export async function processPostcardFromUrl(
           .where(eq(analyses.id, analysis.id));
 
         return {
-          url: analysis.url,
+          url: normalizedUrl,
           markdown: cachedAnalysis[0].posts.markdown || "",
           platform: analysis.platform || "Other",
           corroboration: {
-            primarySources: JSON.parse((analysis.primarySources as string) || "[]"),
-            queriesExecuted: JSON.parse((analysis.queriesExecuted as string) || "[]"),
-            verdict: (analysis.verdict as Corroboration["verdict"]) || "insufficient_data",
+            primarySources: JSON.parse(
+              (analysis.primarySources as string) || "[]",
+            ),
+            queriesExecuted: JSON.parse(
+              (analysis.queriesExecuted as string) || "[]",
+            ),
+            verdict:
+              (analysis.verdict as Corroboration["verdict"]) ||
+              "insufficient_data",
             summary: (analysis.summary as string) || "",
             confidenceScore: analysis.confidenceScore || 0,
-            corroborationLog: JSON.parse((analysis.corroborationLog as string) || "[]"),
+            corroborationLog: JSON.parse(
+              (analysis.corroborationLog as string) || "[]",
+            ),
           },
           postcardScore: analysis.postcardScore,
           timestamp: analysis.createdAt.toISOString(),
@@ -261,7 +271,7 @@ export async function processPostcardFromUrl(
       const existingPost = await db
         .select()
         .from(posts)
-        .where(eq(posts.url, url))
+        .where(eq(posts.url, normalizedUrl))
         .limit(1);
 
       let pId: string;
@@ -308,7 +318,7 @@ export async function processPostcardFromUrl(
           await db.insert(analyses).values({
             id: crypto.randomUUID(),
             postId: pId,
-            url,
+            url: normalizedUrl,
             platform,
             postcardScore,
             originScore: 0.5,
@@ -328,7 +338,7 @@ export async function processPostcardFromUrl(
         pId = crypto.randomUUID();
         await db.insert(posts).values({
           id: pId,
-          url,
+          url: normalizedUrl,
           platform,
           markdown,
           mainText: markdown.slice(0, 500),
@@ -337,7 +347,7 @@ export async function processPostcardFromUrl(
         await db.insert(analyses).values({
           id: crypto.randomUUID(),
           postId: pId,
-          url,
+          url: normalizedUrl,
           platform,
           postcardScore,
           originScore: 0.5,
@@ -354,13 +364,17 @@ export async function processPostcardFromUrl(
         });
       }
       const aId = (
-        await db.select().from(analyses).where(eq(analyses.postId, pId)).limit(1)
+        await db
+          .select()
+          .from(analyses)
+          .where(eq(analyses.postId, pId))
+          .limit(1)
       )[0]?.id;
 
       progress("complete", "Postcard complete", 1);
 
       return PostcardResponseSchema.parse({
-        url,
+        url: normalizedUrl,
         markdown,
         platform,
         corroboration,
@@ -385,4 +399,3 @@ export async function processPostcardFromUrl(
     throw error;
   }
 }
-
