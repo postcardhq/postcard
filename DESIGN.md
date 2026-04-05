@@ -46,9 +46,10 @@ The navigator agent triangulates the source URL using OCR metadata and platform 
 
 **Content Ingestion (UnifiedPost Strategy):** To ensure maximum reliability and bypass common "login required" blocks, Postcard uses a **Strategy Pattern** for data ingestion. The system inspects the URL and delegates to the most robust **UnifiedPostClient**:
 
-- **Reddit Strategy:** Uses the native `.json` endpoint for character-perfect markdown and engagement counts without scraping.
-- **YouTube Strategy:** Uses oEmbed for video metadata and specialized shadow scrapers for community posts.
-- **Jina Fallback:** Acts as a high-fidelity markdown scraper for general websites and a secondary pass if a primary client fails.
+- **Reddit Strategy:** Uses the native `.json` endpoint for character-perfect markdown.
+- **YouTube Strategy:** Uses oEmbed for video metadata and shadow scrapers for community posts.
+- **Social oEmbed (X, TikTok, Instagram):** Leverages official oEmbed APIs to capture high-fidelity metadata (author names, absolute timestamps) even when direct scraping is blocked.
+- **Jina Fallback:** Acts as a high-fidelity markdown scraper for general websites.
 
 This stage produces a **UnifiedPost** object, standardizing the "ground truth" for the forensic audit. When ingestion is blocked by a platform, the UI provides transparency by displaying the raw markdown retrieved during the attempt.
 
