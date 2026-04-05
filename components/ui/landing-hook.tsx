@@ -34,7 +34,6 @@ export function LandingHook() {
       }}
     >
       <div className="mx-auto max-w-3xl px-6 py-16">
-
         {/* Eyebrow */}
         <motion.p
           className="text-[11px] tracking-[0.3em] uppercase mb-5"
@@ -140,7 +139,6 @@ export function LandingHook() {
             </div>
           ))}
         </motion.div>
-
       </div>
     </section>
   );

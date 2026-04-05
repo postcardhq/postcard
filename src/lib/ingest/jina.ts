@@ -1,8 +1,9 @@
 import type { UnifiedPostClient, UnifiedPost } from "./types";
 
 export class JinaPostClient implements UnifiedPostClient {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   canHandle(_url: string): boolean {
-    return true; // Final fallback
+    return true;
   }
 
   async fetch(url: string): Promise<UnifiedPost> {
