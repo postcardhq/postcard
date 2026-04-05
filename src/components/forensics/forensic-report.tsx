@@ -311,7 +311,7 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
                 </span>
               </p>
               <p
-                className="mt-1.5 text-xs font-semibold tracking-wide"
+                className="mt-1.5 text-sm font-semibold tracking-wide"
                 style={{ color }}
               >
                 {verdict}
@@ -387,15 +387,15 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
                 href={triangulation.targetUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="break-all text-xs underline underline-offset-2"
+                className="break-all text-sm underline underline-offset-2"
                 style={{ color: "var(--postal-blue)" }}
               >
                 {triangulation.targetUrl}
               </a>
             ) : (
               <p
-                className="text-xs italic"
-                style={{ color: "var(--postal-ink-faint)" }}
+                className="text-sm italic"
+                style={{ color: "var(--postal-ink-muted)" }}
               >
                 Point of Origin Obscured
               </p>
@@ -439,8 +439,8 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
                     {String(i + 1).padStart(2, "0")}
                   </span>
                   <p
-                    className="text-xs leading-relaxed"
-                    style={{ color: "var(--postal-ink-muted)" }}
+                    className="text-sm leading-relaxed"
+                    style={{ color: "var(--postal-ink)" }}
                   >
                     {entry}
                   </p>
@@ -532,10 +532,10 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
                   Extracted OCR Text
                 </p>
                 <pre
-                  className="text-xs leading-relaxed whitespace-pre-wrap overflow-y-auto"
+                  className="text-sm leading-relaxed whitespace-pre-wrap overflow-y-auto"
                   style={{
                     fontFamily: "var(--font-serif)",
-                    color: "var(--postal-ink-muted)",
+                    color: "var(--postal-ink)",
                     background: "var(--postal-paper-3)",
                     border: "1px dashed var(--postal-ink-faint)",
                     padding: "0.75rem",
@@ -554,10 +554,10 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
                   Extracted Content
                 </p>
                 <div
-                  className="text-xs leading-relaxed p-3"
+                  className="text-sm leading-relaxed p-3"
                   style={{
                     fontFamily: "var(--font-serif)",
-                    color: "var(--postal-ink-muted)",
+                    color: "var(--postal-ink)",
                     background: "var(--postal-paper-3)",
                     border: "1px dashed var(--postal-ink-faint)",
                   }}
@@ -617,10 +617,10 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
           transition={{ delay: 1.2, duration: 0.4 }}
         >
           <button
-            className="text-xs tracking-widest uppercase px-6 py-2 cursor-pointer"
+            className="text-sm tracking-widest uppercase px-6 cursor-pointer inline-flex items-center justify-center min-h-[44px]"
             style={{
               fontFamily: "var(--font-serif)",
-              color: "var(--postal-ink-muted)",
+              color: "var(--postal-ink)",
               border: "1px solid var(--postal-ink-faint)",
               background: "var(--postal-paper)",
             }}
