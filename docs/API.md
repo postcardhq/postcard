@@ -166,6 +166,16 @@ If a completed analysis exists and `refresh` is not set, returns cached results:
 }
 ```
 
+### GET /api/postcards/[id]/og
+
+Generates a dynamic Open Graph (OG) social card image for a completed postcard. This endpoint is used automatically by the `<meta property="og:image">` tags on the SSR report page to ensure forensic reports unfurl elegantly on platforms like Discord and X. The returned content type is `image/png`.
+
+**Path parameters:**
+
+| Parameter | Required | Description                              |
+| :-------- | :------- | :--------------------------------------- |
+| `id`      | Yes      | The UUID of the completed postcard trace |
+
 ### Polling for Status
 
 1. Call `POST /api/postcards` with the URL to start analysis

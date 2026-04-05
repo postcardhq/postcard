@@ -109,11 +109,12 @@ For the complete API reference with examples, see **[API.md](API.md)**.
 
 ### Endpoints
 
-| Method   | Path                  | Description                                                                                     |
-| :------- | :-------------------- | :---------------------------------------------------------------------------------------------- |
-| **GET**  | `/postcards?url=`     | SSR page - displays forensic report for the given URL (or initiates new analysis if not cached) |
-| **GET**  | `/api/postcards?url=` | API with content negotiation - returns JSON if `Accept: application/json`, otherwise redirects  |
-| **POST** | `/api/postcards`      | Submit post URL and start forensic analysis                                                     |
+| Method   | Path                     | Description                                                                                     |
+| :------- | :----------------------- | :---------------------------------------------------------------------------------------------- |
+| **GET**  | `/postcards?url=`        | SSR page - displays forensic report for the given URL (or initiates new analysis if not cached) |
+| **GET**  | `/api/postcards?url=`    | API with content negotiation - returns JSON if `Accept: application/json`, otherwise redirects  |
+| **POST** | `/api/postcards`         | Submit post URL and start forensic analysis                                                     |
+| **GET**  | `/api/postcards/[id]/og` | Generates a dynamic High-Fidelity Open Graph PNG image for social media embeds                  |
 
 ### API design decisions
 
