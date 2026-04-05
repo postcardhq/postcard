@@ -8,7 +8,7 @@ Postcard provides a public REST API for forensic verification of social media po
 ## Base URL
 
 ```
-https://your-deployment.com/api/postcards
+https://postcard.fartlabs.org/api/postcards
 ```
 
 ## OpenAPI Specification
@@ -47,7 +47,7 @@ Retrieves the forensic verification result for a given URL.
 
 ```bash
 curl -H "Accept: application/json" \
-  "https://your-deployment.com/api/postcards?url=https://x.com/user/status/123"
+  "https://postcard.fartlabs.org/api/postcards?url=https://x.com/user/status/123"
 ```
 
 **Example Response:**
@@ -124,7 +124,7 @@ Submits a new URL for forensic verification. Returns a Server-Sent Events (SSE) 
 **Example:**
 
 ```bash
-curl -X POST "https://your-deployment.com/api/postcards" \
+curl -X POST "https://postcard.fartlabs.org/api/postcards" \
   -H "Content-Type: application/json" \
   -d '{ "url": "https://x.com/user/status/123" }'
 ```

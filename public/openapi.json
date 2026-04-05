@@ -11,6 +11,10 @@
   },
   "servers": [
     {
+      "url": "https://postcard.fartlabs.org/api",
+      "description": "Production API"
+    },
+    {
       "url": "/api",
       "description": "Local/Relative API base"
     }
@@ -38,7 +42,64 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PostcardReport"
+                  "type": "object",
+                  "properties": {
+                    "url": { "type": "string", "format": "uri" },
+                    "platform": { "type": "string" },
+                    "postcardScore": {
+                      "type": "number",
+                      "description": "Postcard score (0-100)"
+                    },
+                    "markdown": { "type": "string" },
+                    "postcard": {
+                      "type": "object",
+                      "properties": {
+                        "platform": {
+                          "type": "string",
+                          "enum": [
+                            "X",
+                            "YouTube",
+                            "Reddit",
+                            "Instagram",
+                            "Other"
+                          ]
+                        },
+                        "mainText": { "type": "string" },
+                        "username": { "type": "string" },
+                        "timestampText": { "type": "string" }
+                      }
+                    },
+                    "triangulation": {
+                      "type": "object",
+                      "properties": {
+                        "targetUrl": { "type": "string", "format": "uri" },
+                        "queries": {
+                          "type": "array",
+                          "items": { "type": "string" }
+                        }
+                      }
+                    },
+                    "audit": {
+                      "type": "object",
+                      "properties": {
+                        "originScore": { "type": "number" },
+                        "temporalScore": { "type": "number" },
+                        "totalScore": {
+                          "type": "number",
+                          "description": "Postcard score (0-100)"
+                        },
+                        "auditLog": {
+                          "type": "array",
+                          "items": { "type": "string" }
+                        }
+                      }
+                    },
+                    "corroboration": {
+                      "$ref": "#/components/schemas/Corroboration"
+                    },
+                    "timestamp": { "type": "string", "format": "date-time" },
+                    "analysisId": { "type": "string", "format": "uuid" }
+                  }
                 }
               }
             }
@@ -137,6 +198,21 @@
             "type": "string",
             "description": "Full extracted content in Markdown format"
           },
+          "triangulation": {
+            "type": "object",
+            "properties": {
+              "targetUrl": {
+                "type": "string",
+                "format": "uri"
+              },
+              "queries": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
           "audit": {
             "type": "object",
             "properties": {
@@ -147,7 +223,8 @@
                 "type": "number"
               },
               "totalScore": {
-                "type": "number"
+                "type": "number",
+                "description": "Postcard score (0-100)"
               },
               "auditLog": {
                 "type": "array",
@@ -194,6 +271,20 @@
                 "relevance": {
                   "type": "string",
                   "enum": ["supporting", "refuting", "neutral"]
+                }
+              }
+            }
+          },
+          "queriesExecuted": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "query": {
+                  "type": "string"
+                },
+                "sourcesFound": {
+                  "type": "number"
                 }
               }
             }

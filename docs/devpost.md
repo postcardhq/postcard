@@ -1,6 +1,7 @@
 # Postcard: Devpost submission
 
-**Tagline:** Democratizing the truth. Trace every post back to its source.
+**Tagline:** Democratizing the truth. Trace every post back to its source.\
+**Demo:** [postcard.fartlabs.org](https://postcard.fartlabs.org)
 
 ---
 

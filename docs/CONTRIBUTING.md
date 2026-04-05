@@ -70,6 +70,7 @@ The test suite automatically utilizes the `fake` project configuration to ensure
 
 ## Documentation
 
+- **Live Demo:** [postcard.fartlabs.org](https://postcard.fartlabs.org)
 - **Hosted Docs:** [Mintlify](https://www.mintlify.com/postcardhq/postcard)
 - **OpenAPI:** [openapi.json](../public/openapi.json)
 

@@ -17,6 +17,7 @@ content has drifted from the ground truth.
 
 **Track:** [Cybersecurity](https://pantherhacks2026.devpost.com/)\
 **Submission:** [Devpost](https://devpost.com/software/postcard-bpx2mz)\
+**Demo:** [postcard.fartlabs.org](https://postcard.fartlabs.org)\
 **Challenge:** Rebuilding trust in a "post-truth" digital era.\
 **Pitch Script:** [View Video Script](./PITCH.md)\
 **Submission Summary:** [View Summary](./docs/devpost.md)
@@ -28,8 +29,9 @@ sequenceDiagram
     participant U as Frontend (/postcards)
     participant API as API Route (/api/postcards)
     participant P as Forensic Pipeline
-    participant I as Unified Ingest (oEmbed/Jina)
-    participant A as Corroborator Agent (Gemini)
+    participant I as UnifiedPostStrategy (oEmbed/Jina)
+    participant C as Corroborator Agent (Gemini)
+    participant V as Verifier Agent (Gemini)
     participant DB as Database (Turso)
 
     U->>API: POST /api/postcards { url: "https://x.com/..." }
@@ -40,20 +42,24 @@ sequenceDiagram
     alt Cache Hit
         DB-->>P: Return cached report
     else Cache Miss
-        P->>I: fetch(url)
+        P->>I: unifiedPostClient.fetch(url)
         I-->>P: High-fidelity Markdown
         P->>U: SSE Event: Progress ("Scraping complete")
 
-        P->>A: corroboratePostcard(content)
-        A-->>P: Independent Evidence & Verdict
+        P->>C: corroboratePostcard(content)
+        C-->>P: Independent Evidence & Verdict
         P->>U: SSE Event: Progress ("Corroboration complete")
+
+        P->>V: auditPostcard(url, postcard)
+        V-->>P: Origin & Temporal Scores
+        P->>U: SSE Event: Progress ("Audit complete")
 
         P->>P: Calculate Postcard Score
         P->>DB: Persist new analysis
     end
 
-    P-->>API: Final Postcard Report
-    API->>U: SSE Event: Complete { report }
+    P-->>API: PostcardResponse + ForensicReport
+    API->>U: SSE Event: Complete { report, forensicReport }
     API-->>U: Close Stream
 ```
 
@@ -88,12 +94,13 @@ corroboration for social media posts:
 
 1. **URL Entrypoint:** Users submit the direct source URL for forensic
    verification.
-2. **Multimodal Ingest:** Jina Reader ingests live content to establish ground
-   truth.
-3. **Forensic Audit:** Playwright and direct site checks verify origin and
-   temporal alignment.
-4. **Corroboration:** Deep search across trusted domains (X, Reddit, News) to
-   verify claims.
+2. **Strategy-Based Ingest:** `UnifiedPostStrategy` delegates to specialized
+   clients (Reddit JSON, YouTube oEmbed, X oEmbed, Instagram oEmbed, TikTok
+   scraper) with Jina Reader as fallback for general websites.
+3. **Corroboration:** Gemini agent performs Google Dorking across trusted
+   domains (X, Reddit, News) to verify claims and identify primary sources.
+4. **Verification:** Verifier agent checks URL reachability and temporal
+   alignment against the post's timestamp.
 
 ## Lessons learned
 

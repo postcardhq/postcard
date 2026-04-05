@@ -34,15 +34,23 @@ Postcard operates as a forensic pipeline designed to audit social media content.
 
 ### Stages
 
+> **Note:** The pipeline supports both URL-based and screenshot-based entrypoints. The screenshot workflow (Preprocessor → Inference → Navigator) is currently disabled in production.
+
 #### Preprocessor
+
+> _Applies to screenshot-based workflow only (currently disabled)_
 
 The preprocessor uses sharp to normalize contrast, adjust brightness, and sharpen the image. This optimization ensures high-quality OCR results during resolution.
 
 #### Inference
 
+> _Applies to screenshot-based workflow only (currently disabled)_
+
 Gemini 2.5/3+ analyzes the processed image to extract structured metadata and infer the social media platform (X, YouTube, Reddit, Instagram, or 'Other'). This inference is critical for direct search dorking.
 
 #### Navigator
+
+> _Applies to screenshot-based workflow only (currently disabled)_
 
 The navigator agent triangulates the source URL using OCR metadata and platform clues. It generates targeted search queries and prioritizes primary sources over aggregators.
 
@@ -55,9 +63,9 @@ The navigator agent triangulates the source URL using OCR metadata and platform 
 
 This stage produces a UnifiedPost object, standardizing the "ground truth" for the forensic audit. When ingestion is blocked by a platform, the UI provides transparency by displaying the raw markdown retrieved during the attempt.
 
-#### Auditor
+#### Verifier
 
-Playwright scrapes the live URL to compute the final forensic subscores. Using an allowlist of trusted domains, the auditor performs Google Dorking to identify primary sources (news articles, official statements, repository logs) that verify or refute the post's content.
+The verifier agent computes origin reachability and temporal alignment scores using Gemini. It performs Google Dorking to identify primary sources (news articles, official statements, repository logs) that verify or refute the post's content.
 
 ## Database / Caching
 
