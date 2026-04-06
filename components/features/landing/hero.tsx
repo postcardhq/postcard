@@ -9,7 +9,7 @@ export function Hero({ children }: { children?: React.ReactNode }) {
   return (
     <section
       className="relative w-full overflow-hidden"
-      style={{ minHeight: "640px" }}
+      style={{ minHeight: "560px" }}
     >
       {/* Sky gradient */}
       <div
@@ -76,7 +76,7 @@ export function Hero({ children }: { children?: React.ReactNode }) {
       </motion.div>
 
       {/* Content — stacks title → divider → tagline → input panel in the sky */}
-      <div className="relative z-10 flex flex-col items-center pt-16 pb-48 px-6 text-center">
+      <div className="relative z-10 flex flex-col items-center pt-14 pb-32 px-6 text-center">
         {/* Airmail stripe — key visual separator at very top */}
         <motion.div
           className="w-full absolute top-0 left-0 h-3"

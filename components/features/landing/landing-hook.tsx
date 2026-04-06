@@ -33,7 +33,7 @@ export function LandingHook() {
         borderBottom: "1px solid var(--postal-ink-muted)",
       }}
     >
-      <div className="mx-auto max-w-3xl px-6 py-16">
+      <div className="mx-auto max-w-3xl px-6 py-10">
         <motion.p
           data-motion
           className="text-[11px] tracking-[0.3em] uppercase mb-5"
@@ -64,8 +64,8 @@ export function LandingHook() {
               color: "var(--postal-ink)",
             }}
           >
-            &ldquo;In an era of digital echoes, knowing what is real isn&rsquo;t
-            just a preference&mdash;it&rsquo;s a necessity.&rdquo;
+            In an era of digital echoes, knowing what is real isn&rsquo;t just a
+            preference&mdash;it&rsquo;s a necessity.
           </p>
         </motion.blockquote>
 

@@ -377,7 +377,7 @@ export function AnalysisJourney({
     <div
       className="w-full relative overflow-hidden"
       style={{
-        height: "clamp(440px, 38vw, 560px)",
+        height: "clamp(380px, 32vw, 480px)",
         background: `linear-gradient(
           to bottom,
           var(--postal-sky-deep) 0%,
@@ -537,7 +537,7 @@ export function AnalysisJourney({
       </div>
 
       {/* Landscape SVG ── everything in one coordinate system */}
-      <div className="absolute inset-x-0" style={{ top: "15%" }}>
+      <div className="absolute inset-x-0" style={{ top: "8%" }}>
         <svg
           viewBox="0 0 1200 380"
           className="w-full"
