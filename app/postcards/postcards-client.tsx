@@ -144,7 +144,7 @@ export default function PostcardsClient({
   }, []);
 
   useEffect(() => {
-    if (processingUrl && !report && !postcardStatus) {
+    if (processingUrl && !report) {
       startPolling(processingUrl);
     }
     return () => {
@@ -152,7 +152,7 @@ export default function PostcardsClient({
         clearInterval(pollingRef.current);
       }
     };
-  }, [processingUrl, report, postcardStatus, startPolling]);
+  }, [processingUrl, report, startPolling]);
 
   const currentStatus = isReplay ? mockStatus : postcardStatus;
 
