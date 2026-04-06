@@ -2,6 +2,7 @@
 
 **Tagline.** Democratizing the truth. Trace every post back to its source.\
 **GitHub.** [github.com/postcardhq/postcard](https://github.com/postcardhq/postcard)\
+**Docs.** [mintlify.com/postcardhq/postcard](https://www.mintlify.com/postcardhq/postcard)\
 **Demo.** [postcard.fartlabs.org](https://postcard.fartlabs.org)\
 **Metadata.** [devpost.json](./devpost.json)
 

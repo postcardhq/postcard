@@ -8,6 +8,7 @@
 [![Turso](https://img.shields.io/badge/Turso-202020?logo=turso&logoColor=white)](https://turso.tech/)
 [![Drizzle](https://img.shields.io/badge/Drizzle-C5F74F?logo=drizzle&logoColor=000)](https://orm.drizzle.team/)
 [![Playwright](https://img.shields.io/badge/Playwright-2EAD33?logo=playwright&logoColor=white)](https://playwright.dev/)
+[![DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/postcardhq/postcard)
 
 > _Trace the Truth._
 
@@ -17,9 +18,10 @@ Postcard is a digital forensics tool dedicated to tracing viral content back to 
 
 ## Hackathon submission
 
-**Track.** [Cybersecurity](https://pantherhacks2026.devpost.com/)
-**Submission.** [Devpost](https://devpost.com/software/postcard-bpx2mz)
-**Demo.** [postcard.fartlabs.org](https://postcard.fartlabs.org)
+- **Track** [Cybersecurity](https://pantherhacks2026.devpost.com/)
+- **Submission** [Devpost](https://devpost.com/software/postcard-bpx2mz)
+- **Demo** [postcard.fartlabs.org](https://postcard.fartlabs.org)
+- **Docs** [Mintlify](https://www.mintlify.com/postcardhq/postcard)
 
 ## Pipeline architecture
 
@@ -92,6 +94,7 @@ We built a 4-stage forensic pipeline focused on deep audit log generation and co
 
 ## Documentation
 
+- [Postcard Documentation](https://www.mintlify.com/postcardhq/postcard). Official external documentation site.
 - [docs/SUBMISSION.md](docs/SUBMISSION.md). PantherHacks 2026 submission summary, pitch script, and demo links.
 - [docs/DESIGN.md](docs/DESIGN.md). Full technical specification, architecture, and pipeline stages.
 - [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md). Development environment setup, manual testing guide, and style guide.

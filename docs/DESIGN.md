@@ -2,6 +2,7 @@
 
 > **Team.** [Ethan](https://github.com/EthanThatOneKid), [Yves](https://github.com/hallowsyves), [Rohit](https://github.com/rohitj26)
 > **Repository.** [postcardhq/postcard](https://github.com/postcardhq/postcard)  
+> **Docs.** [Mintlify](https://www.mintlify.com/postcardhq/postcard)  
 > **Submission.** [Devpost](https://devpost.com/software/postcard-bpx2mz)  
 > **Event.** [PantherHacks 2026](https://pantherhacks2026.devpost.com/) (April 3–5, 2026)  
 > **Track.** [Cybersecurity / OSINT](https://pantherhacks2026.devpost.com/)
