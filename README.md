@@ -8,6 +8,8 @@
 [![Turso](https://img.shields.io/badge/Turso-202020?logo=turso&logoColor=white)](https://turso.tech/)
 [![Drizzle](https://img.shields.io/badge/Drizzle-C5F74F?logo=drizzle&logoColor=000)](https://orm.drizzle.team/)
 [![Playwright](https://img.shields.io/badge/Playwright-2EAD33?logo=playwright&logoColor=white)](https://playwright.dev/)
+[![OpenAPI](https://img.shields.io/badge/OpenAPI-3.1-black?logo=openapi-initiative&logoColor=white)](public/openapi.json)
+[![Mintlify](https://img.shields.io/badge/Mintlify-black?logo=mintlify&logoColor=white)](https://www.mintlify.com/postcardhq/postcard)
 [![DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/postcardhq/postcard)
 
 > _Trace the Truth._
@@ -87,19 +89,19 @@ Screenshots strip all context. By the time something goes viral, it's been cropp
 
 We built a 4-stage forensic pipeline focused on deep audit log generation and corroboration for social media posts:
 
-- **Multimodal ingest.** Postcard utilizes Jina Reader to ingest live content and metadata, establishing the "ground truth" for the forensic audit.
-- **Forensic audit.** Postcard uses Playwright to perform direct site checks, verifying origin and ensuring temporal alignment with the reported narrative.
-- **Corroboration engine.** Postcard performs deep search across trusted domains to verify claims and find mentions of the content elsewhere to determine its "drift."
-- **Verification platform.** Built with Next.js and Tailwind CSS, providing a clean, terminal-inspired interface for quick, simple forensic verification.
+- **Multimodal ingest:** Postcard utilizes Jina Reader to ingest live content and metadata, establishing the "ground truth" for the forensic audit.
+- **Forensic audit:** Postcard uses Playwright to perform direct site checks, verifying origin and ensuring temporal alignment with the reported narrative.
+- **Corroboration engine:** Postcard performs deep search across trusted domains to verify claims and find mentions of the content elsewhere to determine its "drift."
+- **Verification platform:** Built with Next.js and Tailwind CSS, providing a clean, terminal-inspired interface for quick, simple forensic verification.
 
 ## Documentation
 
-- [Postcard Documentation](https://www.mintlify.com/postcardhq/postcard). Official external documentation site.
-- [docs/SUBMISSION.md](docs/SUBMISSION.md). PantherHacks 2026 submission summary, pitch script, and demo links.
-- [docs/DESIGN.md](docs/DESIGN.md). Full technical specification, architecture, and pipeline stages.
-- [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md). Development environment setup, manual testing guide, and style guide.
-- [docs/API.md](docs/API.md). Public API reference and standard polling patterns.
-- [public/openapi.json](public/openapi.json). OpenAPI v3.1 Specification for SDK generation.
+- [Postcard Documentation](https://www.mintlify.com/postcardhq/postcard): Official external documentation site.
+- [docs/SUBMISSION.md](docs/SUBMISSION.md): PantherHacks 2026 submission summary, pitch script, and demo links.
+- [docs/DESIGN.md](docs/DESIGN.md): Full technical specification, architecture, and pipeline stages.
+- [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md): Development environment setup, manual testing guide, and style guide.
+- [docs/API.md](docs/API.md): Public API reference and standard polling patterns.
+- [public/openapi.json](public/openapi.json): OpenAPI v3.1 Specification for SDK generation.
 
 ---
 
