@@ -413,15 +413,48 @@ export function AnalysisJourney({
               >
                 Unable to Trace Post
               </p>
-              <p
-                className="text-sm text-center max-w-md"
-                style={{
-                  fontFamily: "var(--font-serif)",
-                  color: "var(--postal-ink-muted)",
-                }}
-              >
-                {error}
-              </p>
+              <div className="flex flex-col gap-4 items-center">
+                <p
+                  className="text-sm text-center max-w-md"
+                  style={{
+                    fontFamily: "var(--font-serif)",
+                    color: "var(--postal-ink)",
+                    fontWeight: 500,
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {error.includes("Last error:")
+                    ? error.split("Last error:")[0].trim()
+                    : error}
+                </p>
+                {error.includes("Last error:") && (
+                  <div className="w-full max-w-lg">
+                    <p
+                      className="text-[9px] tracking-[0.2em] uppercase mb-2 text-center"
+                      style={{
+                        fontFamily: "var(--font-serif)",
+                        color: "var(--postal-ink-muted)",
+                      }}
+                    >
+                      Technical Detail
+                    </p>
+                    <pre
+                      className="text-[11px] p-4 text-left overflow-x-auto"
+                      style={{
+                        fontFamily: "var(--font-mono), monospace",
+                        background: "rgba(0,0,0,0.04)",
+                        border: "1px dashed var(--postal-ink-faint)",
+                        color: "var(--postal-ink-muted)",
+                        whiteSpace: "pre-wrap",
+                        wordBreak: "break-word",
+                        lineHeight: 1.6,
+                      }}
+                    >
+                      {error.split("Last error:")[1].trim()}
+                    </pre>
+                  </div>
+                )}
+              </div>
               <button
                 className="text-xs tracking-widest uppercase px-6 py-2"
                 style={{

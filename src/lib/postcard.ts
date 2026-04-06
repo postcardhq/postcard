@@ -39,7 +39,7 @@ import { type PipelineStage, PIPELINE_STAGES, SCORING_WEIGHTS } from "./config";
  */
 function createPulse(
   currentStage: string,
-  baseMessage: string,
+  baseMessage: string | (() => string),
   currentProgress: number,
   updateFn: (stage: string, message: string, progress: number) => Promise<void>,
   intervalMs: number = 3000,
@@ -61,7 +61,9 @@ function createPulse(
       pulseMessages[
         Math.floor(count / indicators.length) % pulseMessages.length
       ];
-    const heartbeatMessage = `${baseMessage}${indicator} (${subMessage})`;
+    const base =
+      typeof baseMessage === "function" ? baseMessage() : baseMessage;
+    const heartbeatMessage = `${base}${indicator} (${subMessage})`;
     updateFn(currentStage, heartbeatMessage, currentProgress).catch(
       console.error,
     );
@@ -344,11 +346,11 @@ export async function processPostcardFromUrl(
       }
 
       // 1. Scraping Layer
-      const baseScrapingMsg = "Fetching content from platform";
-      await updateProgress("scraping", baseScrapingMsg, 0.1);
+      let currentScrapingMsg = "Fetching content from platform";
+      await updateProgress("scraping", currentScrapingMsg, 0.1);
       const stopScrapingPulse = createPulse(
         "scraping",
-        baseScrapingMsg,
+        () => currentScrapingMsg,
         0.1,
         updateProgress,
       );
@@ -356,6 +358,7 @@ export async function processPostcardFromUrl(
       let postData;
       try {
         postData = await unifiedPostClient.fetch(url, (msg) => {
+          currentScrapingMsg = msg;
           updateProgress("scraping", msg, 0.15).catch(console.error);
         });
       } finally {
@@ -411,11 +414,11 @@ export async function processPostcardFromUrl(
       const platform = postData.platform;
 
       // 2. Corroboration Layer
-      const baseCorroborationMsg = "Searching for primary sources";
-      await updateProgress("corroborating", baseCorroborationMsg, 0.4);
+      let currentCorroborationMsg = "Searching for primary sources";
+      await updateProgress("corroborating", currentCorroborationMsg, 0.4);
       const stopCorroborationPulse = createPulse(
         "corroborating",
-        baseCorroborationMsg,
+        () => currentCorroborationMsg,
         0.4,
         updateProgress,
       );
@@ -433,6 +436,7 @@ export async function processPostcardFromUrl(
           postcard,
           markdown,
           async (msg: string) => {
+            currentCorroborationMsg = msg;
             await updateProgress("corroborating", msg, 0.5);
           },
           userApiKey,

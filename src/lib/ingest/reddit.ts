@@ -15,33 +15,45 @@ export class RedditPostClient implements UnifiedPostClient {
       ? url
       : `${url.replace(/\/$/, "")}.json`;
 
-    const response = await fetch(jsonUrl);
-    if (!response.ok) {
-      onProgress?.(`Reddit fetch failed with status ${response.status}`);
-      throw new Error(`Reddit fetch failed: ${response.status}`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    try {
+      const response = await fetch(jsonUrl, { signal: controller.signal });
+      if (!response.ok) {
+        onProgress?.(`Reddit fetch failed with status ${response.status}`);
+        throw new Error(`Reddit fetch failed: ${response.status}`);
+      }
+
+      onProgress?.("Parsing Reddit post data...");
+      const data = await response.json();
+      const post = data[0].data.children[0].data;
+
+      return {
+        platform: "Reddit",
+        title: post.title,
+        markdown: post.selftext || post.url,
+        author: post.author,
+        url: `https://www.reddit.com${post.permalink}`,
+        timestamp: new Date(post.created_utc * 1000),
+        engagement: {
+          upvotes: post.ups.toString(),
+          comments: post.num_comments.toString(),
+          awards: post.total_awards_received.toString(),
+        },
+        metadata: {
+          subreddit: post.subreddit,
+          is_video: post.is_video,
+          over_18: post.over_18,
+        },
+      };
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === "AbortError") {
+        throw new Error("Reddit fetch timed out");
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeoutId);
     }
-
-    onProgress?.("Parsing Reddit post data...");
-    const data = await response.json();
-    const post = data[0].data.children[0].data;
-
-    return {
-      platform: "Reddit",
-      title: post.title,
-      markdown: post.selftext || post.url,
-      author: post.author,
-      url: `https://www.reddit.com${post.permalink}`,
-      timestamp: new Date(post.created_utc * 1000),
-      engagement: {
-        upvotes: post.ups.toString(),
-        comments: post.num_comments.toString(),
-        awards: post.total_awards_received.toString(),
-      },
-      metadata: {
-        subreddit: post.subreddit,
-        is_video: post.is_video,
-        over_18: post.over_18,
-      },
-    };
   }
 }

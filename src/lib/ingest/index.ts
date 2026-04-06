@@ -33,8 +33,17 @@ export class UnifiedPostStrategy {
         error,
       );
       if (client instanceof JinaPostClient) throw error;
-      onProgress?.("Falling back to Jina Post Client...");
-      return new JinaPostClient().fetch(url, onProgress);
+
+      onProgress?.("Primary client failed. Trying Jina Reader fallback...");
+      try {
+        return await new JinaPostClient().fetch(url, onProgress);
+      } catch (jinaError: unknown) {
+        const msg =
+          jinaError instanceof Error ? jinaError.message : String(jinaError);
+        throw new Error(
+          `Scraping failed: Both primary and fallback (Jina) failed. Ref: ${msg}`,
+        );
+      }
     }
   }
 }
