@@ -9,11 +9,11 @@
 
 ## Project vision
 
-Postcard reverses the entropy of social media screenshots by tracing them back to their source. When users upload a screenshot, Postcard locates the original post, fetches its live metadata, and calculates a postcard score to reveal how much the content has drifted from the truth.
+Postcard utilizes the **"Wisdom of the Crowd"** to trace viral social media screenshots back to their definitive source. When users upload a screenshot, Postcard locates the original post, fetches its live metadata, and calculates a **Postcard Score** to reveal how much the content has drifted from the ground truth.
 
 ### Core problem
 
-Screenshots strip context. Cropped text, missing timestamps, and altered engagement counts make it easy to spread misinformation. Postcard restores that context by finding the primary source and auditing it for forensic consistency.
+Screenshots strip context. Cropped text, missing timestamps, and altered engagement counts make it easy to spread misinformation. Postcard restores that context by leveraging the **"Wisdom of the Crowd"** to find the primary source and audit it for forensic consistency.
 
 ### Out of scope
 
@@ -27,14 +27,14 @@ Postcard operates as a forensic pipeline designed to audit social media content.
 
 ### Forensic pipeline
 
-1. URL Entrypoint: Users submit the direct source URL for forensic verification.
-2. Strategy-Based Ingest: A platform-aware `UnifiedPostStrategy` delegates to specialized UnifiedPostClients (Reddit, YouTube oEmbed) or Jina Reader for high-fidelity data retrieval.
-3. Forensic Audit: Validation of origin, temporal alignment, and engagement consistency using live metadata.
-4. Corroboration: Deep search across trusted domains (X, Reddit, News) to verify claims.
+1. **Multimodal Ingest:** Utilizes Jina Reader to ingest live content and metadata, establishing the "ground truth" for the forensic audit.
+2. **Forensic Audit:** Uses Playwright to perform direct site checks, verifying origin and ensuring temporal alignment with the reported narrative.
+3. **Corroboration Engine:** Performs deep search across trusted domains to verify claims and find mentions of the content elsewhere to determine its "drift."
+4. **Verification Platform:** Built with Next.js and Tailwind CSS, providing a clean, terminal-inspired interface for quick, simple forensic verification.
 
 ### Stages
 
-> **Note:** The pipeline supports both URL-based and screenshot-based entrypoints. The screenshot workflow (Preprocessor → Inference → Navigator) is currently disabled in production.
+> **Note:** The pipeline supports both URL-based and screenshot-based entrypoints. The screenshot workflow (Preprocessor → Inference → Navigator) is part of the original vision and is currently disabled in production.
 
 #### Preprocessor
 

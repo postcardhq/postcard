@@ -14,8 +14,9 @@ import {
   incrementPostcardHits,
 } from "@/src/lib/postcard";
 import { getBaseUrl } from "@/src/lib/config";
-import { dbRowToReport } from "@/src/api/conversions";
+import { fromPostcardRow } from "@/src/api/conversions";
 import PostcardsClient from "./postcards-client";
+import { waitUntil } from "@vercel/functions";
 
 interface Props {
   searchParams: Promise<{
@@ -115,7 +116,7 @@ export default async function PostcardsPage({ searchParams }: Props) {
   if (normalizedUrl) {
     const data = await getPostcardsByUrl(normalizedUrl);
     if (data && !shouldRefresh) {
-      initialReport = dbRowToReport(data.postcardRow, data.postRow);
+      initialReport = fromPostcardRow(data.postcardRow, data.postRow);
       // Increment hit counter on every view of a completed report
       if (data.postcardRow.status === "completed") {
         incrementPostcardHits(data.postcardRow.id).catch(console.error);
@@ -123,19 +124,21 @@ export default async function PostcardsPage({ searchParams }: Props) {
     } else if (normalizedUrl && (shouldRefresh || !data)) {
       // Start fresh analysis if refresh=true OR no cached data exists
       const { id } = await createPostcard(normalizedUrl);
-      processPostcardFromUrl(
-        normalizedUrl,
-        undefined,
-        () => {},
-        true,
-        id,
-      ).catch(console.error);
+      waitUntil(
+        processPostcardFromUrl(
+          normalizedUrl,
+          undefined,
+          () => {},
+          true,
+          id,
+        ).catch(console.error),
+      );
       processingUrl = normalizedUrl;
 
       // Even on refresh, if we have old data, we can use it for the "replay" mock
       // This solves the refresh+replay stall.
       if (data && shouldReplay) {
-        initialReport = dbRowToReport(data.postcardRow, data.postRow);
+        initialReport = fromPostcardRow(data.postcardRow, data.postRow);
       }
     }
   }

@@ -7,9 +7,9 @@ import {
 import type { PostRow, PostcardRow } from "../db/schema";
 
 /**
- * Converts a database PostRow to a Postcard domain object for trace agents.
+ * fromPostRow converts a database PostRow to a Postcard domain object for trace agents.
  */
-export function postRowToPostcard(post: PostRow): Postcard {
+export function fromPostRow(post: PostRow): Postcard {
   return PostcardSchema.parse({
     platform: post.platform || "Other",
     username: post.username || undefined,
@@ -22,7 +22,10 @@ export function postRowToPostcard(post: PostRow): Postcard {
  * Converts a database PostcardRow + PostRow pair to a full PostcardReport.
  * Handles all JSON parsing and schema mapping in one place.
  */
-export function dbRowToReport(row: PostcardRow, post: PostRow): PostcardReport {
+export function fromPostcardRow(
+  row: PostcardRow,
+  post: PostRow,
+): PostcardReport {
   const queriesExecuted = JSON.parse(row.queriesExecuted || "[]");
 
   return PostcardReportSchema.parse({

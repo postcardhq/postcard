@@ -12,7 +12,8 @@ import {
   getExistingProcessingPostcard,
   processPostcardFromUrl,
 } from "@/src/lib/postcard";
-import { dbRowToReport } from "@/src/api/conversions";
+import { fromPostcardRow } from "@/src/api/conversions";
+import { waitUntil } from "@vercel/functions";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -58,6 +59,8 @@ export async function GET(request: Request) {
             {
               status: "processing",
               id: row.id,
+              stage: row.stage,
+              progress: row.progress,
               message: row.message || "Forensic trace in progress...",
             },
             { status: 202, headers: CORS_HEADERS },
@@ -76,7 +79,7 @@ export async function GET(request: Request) {
           );
         }
 
-        const report = dbRowToReport(row, post);
+        const report = fromPostcardRow(row, post);
 
         return NextResponse.json(
           PostcardResponseSchema.parse({
@@ -106,8 +109,14 @@ export async function GET(request: Request) {
 
     // 2. If refresh=true OR forced by logic above, start fresh analysis
     const { id } = await createPostcard(normalizedUrl);
-    processPostcardFromUrl(normalizedUrl, undefined, () => {}, true, id).catch(
-      (err) => console.error("Background trace failed:", err),
+    waitUntil(
+      processPostcardFromUrl(
+        normalizedUrl,
+        undefined,
+        () => {},
+        true,
+        id,
+      ).catch((err) => console.error("Background trace failed:", err)),
     );
 
     return NextResponse.json(
@@ -158,7 +167,7 @@ export async function POST(request: Request) {
       if (existingResult.length > 0) {
         const { postcards: row, posts: post } = existingResult[0];
         if (row.status === "completed") {
-          const report = dbRowToReport(row, post);
+          const report = fromPostcardRow(row, post);
           return NextResponse.json(
             PostcardResponseSchema.parse({
               url: normalizedUrl,
@@ -180,8 +189,14 @@ export async function POST(request: Request) {
     const { id } = await createPostcard(normalizedUrl);
 
     // We don't await the full pipeline in the HTTP request to avoid timeouts
-    processPostcardFromUrl(normalizedUrl, userApiKey, () => {}, true, id).catch(
-      (err) => console.error("Background trace failed:", err),
+    waitUntil(
+      processPostcardFromUrl(
+        normalizedUrl,
+        userApiKey,
+        () => {},
+        true,
+        id,
+      ).catch((err) => console.error("Background trace failed:", err)),
     );
 
     return NextResponse.json(

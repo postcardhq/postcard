@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import { db } from "@/src/db";
 import { postcards, posts } from "@/src/db/schema";
 import { eq } from "drizzle-orm";
-import { dbRowToReport } from "@/src/api/conversions";
+import { fromPostcardRow } from "@/src/api/conversions";
 
 export const runtime = "nodejs";
 
@@ -25,7 +25,7 @@ export async function GET(
     }
 
     const { postcards: row, posts: post } = result[0];
-    const report = dbRowToReport(row, post);
+    const report = fromPostcardRow(row, post);
 
     const verdictLabel = report.corroboration.verdict.toUpperCase();
     const verdictColor =

@@ -8,36 +8,24 @@
 
 ## What it does
 
-Postcard is a digital forensics tool dedicate to the democratization of
-honesty. It takes any social media post URL, traces it back to its original
-source, and produces a postcard score (0–100%) measuring how much the content
-has drifted from the truth.
+Postcard is a digital forensics pipeline designed to rebuild trust in online media. It takes a social media URL (or a screenshot) and traces it back to its original source. The core of the project is the **Postcard Score (0–100%)**, a credibility metric calculated by auditing how much the content has drifted from the ground truth.
 
-Tagline: _Democratizing the truth. Trace every post back to its source._
+Tagline: _Trace the Truth._
 
 ## The problem
 
-Screenshots strip all context. By the time something goes viral it's been cropped, captioned, and misattributed. A screenshot of a tweet looks nothing like the original tweet. A screenshot of a news article removes the byline, date, and corrections footer. Postcard reverses that entropy by performing a multi-stage forensic audit of the primary source.
+Screenshots strip all context. By the time something goes viral, it's been cropped, captioned, and stripped of its metadata—making it nearly impossible to tell if the content is authentic or a manufactured narrative. Postcard utilizes the **"Wisdom of the Crowd"** to provide a digital "wayback machine" for credibility, restoring the lost link between viral content and its primary source.
 
 ## How it works
 
 User flow: Enter Post URL → Forensic Pipeline Runs → Postcard Score + Subscore Breakdown appears.
 
-### Entrypoint
+### Forensic Pipeline Stages
 
-Users submit the direct source URL for forensic verification. While the system supports screenshot-to-URL resolution, the primary focus is the direct URL entrypoint to ensure 100% forensic precision.
-
-### Ingestion
-
-Postcard uses the Jina Reader API to ingest live content and metadata (like counts, absolute timestamps, text) from the provided URL. This establishes the "ground truth" for the forensic audit.
-
-### Audit
-
-The system uses Playwright to scrape the live site and compute forensic subscores (Origin, Temporal, Visual).
-
-### Corroboration
-
-An AI SDK agent loop with Google Search grounding performs deep dorking across trusted domains (X, Reddit, and News archives) to verify or refute the claim.
+1. **Multimodal Ingest:** Utilizes Jina Reader to ingest live content and metadata, establishing the "ground truth" for the forensic audit.
+2. **Forensic Audit:** Uses Playwright to perform direct site checks, verifying origin and ensuring temporal alignment with the reported narrative.
+3. **Corroboration Engine:** Performs deep search across trusted domains to verify claims and find mentions of the content elsewhere to determine its "drift."
+4. **Verification Platform:** Built with Next.js and Tailwind CSS, providing a clean, terminal-inspired interface for quick, simple forensic verification.
 
 ## Architecture
 
@@ -46,19 +34,19 @@ Post URL
     │
     ▼
 ┌───────────────────┐
-│ 1. URL Entrypoint │  Direct input (SSE Stream)
+│ 1. Ingest         │  Multimodal (Scanning Source)
 └─────────┬─────────┘
           ▼
 ┌───────────────────┐
-│ 2. Content Ingest │  Jina Reader — fetches ground truth
+│ 2. Audit          │  Playwright — live site verification
 └─────────┬─────────┘
           ▼
 ┌───────────────────┐
-│ 3. Forensic Audit │  Playwright — live sit verification
+│ 3. Corroboration  │  Gemini-powered deep search
 └─────────┬─────────┘
           ▼
 ┌───────────────────┐
-│ 4. Corroboration  │  Gemini 2.5 Flash — deep search dorking
+│ 4. Verification   │  Terminal-inspired platform
 └─────────┬─────────┘
           ▼
 PostcardReport
@@ -66,19 +54,18 @@ PostcardReport
 
 ## Tech stack
 
-| Layer      | Choice                                               |
-| ---------- | ---------------------------------------------------- |
-| Framework  | Next.js 16 (TypeScript)                              |
-| Styling    | Vanilla CSS (Premium Aesthetics)                     |
-| Hosting    | Vercel                                               |
-| AI SDK     | Vercel AI SDK v6 (`@ai-sdk/google`)                  |
-| Model      | Gemini 2.0 Flash (OCR), Gemini 2.5 Flash (Navigator) |
-| Database   | SQLite (libSQL for Turso)                            |
-| Automation | Playwright + sharp                                   |
+| Layer      | Choice                                       |
+| ---------- | -------------------------------------------- |
+| Framework  | Next.js 15+ (TypeScript)                     |
+| Styling    | Tailwind CSS / Vanilla CSS                   |
+| Hosting    | Vercel                                       |
+| AI SDK     | Vercel AI SDK v6 (`@ai-sdk/google`)          |
+| Model      | Gemini 2.0 Flash (OCR), Gemini 1.5/2.5 Flash |
+| Database   | SQLite (libSQL for Turso)                    |
+| Automation | Playwright + sharp                           |
 
 ## Key decisions
 
-- **Postcard Noun:** Unified all terminology to "Postcard" (the tool) and "Postcard Score" (the result).
-- **JSON SSE:** Used JSON body for `POST /api/postcards` to simplify the OpenAPI spec.
-- **Forensic Weights:** Implemented a refined 4-part forensic model (Origin 30%, Corroboration 25%, Bias 25%, Temporal 20%).
-- **Vetted Sources:** Implemented TLD-permissive logic (`.gov`, `.edu`, `.org`).
+- **Postcard Score:** Weighted metric (Origin 30%, Corroboration 25%, Bias 25%, Temporal 20%).
+- **Polling Architecture:** Replaced SSE with robust real-time polling for status updates and reliability.
+- **Screenshot-to-URL:** Part of the original vision; a quality-of-life feature to resolve static screenshots to live URLs for verification.

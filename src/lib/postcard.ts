@@ -23,7 +23,7 @@ export {
   type PostcardReport,
   type Corroboration,
 };
-import { dbRowToReport } from "@/src/api/conversions";
+import { fromPostcardRow } from "@/src/api/conversions";
 
 export type ProgressCallback = (
   stage: string,
@@ -312,7 +312,7 @@ export async function processPostcardFromUrl(
         if (cachedResult.length > 0) {
           const { postcards: row, posts: post } = cachedResult[0];
 
-          const report = dbRowToReport(row, post);
+          const report = fromPostcardRow(row, post);
           return PostcardResponseSchema.parse({
             url: normalizedUrl,
             markdown: post.markdown || "",
@@ -544,7 +544,7 @@ export async function processPostcardFromUrl(
 
       const finalRow = finalResult[0].postcards;
       const finalPost = finalResult[0].posts;
-      const report = dbRowToReport(finalRow, finalPost);
+      const report = fromPostcardRow(finalRow, finalPost);
 
       return PostcardResponseSchema.parse({
         url: normalizedUrl,

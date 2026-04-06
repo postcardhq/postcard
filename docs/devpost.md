@@ -1,6 +1,7 @@
 # Postcard: Devpost submission
 
 **Tagline:** Democratizing the truth. Trace every post back to its source.\
+**GitHub:** [github.com/postcardhq/postcard](https://github.com/postcardhq/postcard)\
 **Demo:** [postcard.fartlabs.org](https://postcard.fartlabs.org)
 
 ---
@@ -17,7 +18,7 @@ In our current "post-truth" era, information is often consumed via contextless s
 
 - **Forensic Traceability:** Automatically identifies the primary source of a claim across X, Reddit, and major news outlets.
 - **Drift Analysis:** Audits content for forensic consistency, checking for temporal alignment and attribution errors.
-- **Screenshot-to-URL Resolution:** A quality-of-life feature that allows users to upload a screenshot to find its live, interactive counterpart.
+- **Screenshot-to-URL Resolution:** Part of our original vision, this feature allows users to upload a screenshot to find its live, interactive counterpart for deep verification.
 - **Subscore Breakdown:** Users don't just get a number; they see a breakdown of source reliability, temporal verification, and cross-platform corroboration.
 
 ## How we built it
@@ -27,11 +28,11 @@ We developed a 4-stage forensic pipeline focused on deep audit log generation:
 1.  **Multimodal Ingest:** We utilized **Jina Reader** to ingest live content and establish a "ground truth" version of the post.
 2.  **Forensic Audit:** Using **Playwright**, we performed direct site checks to verify the origin and ensure the timestamp aligns with the reported narrative.
 3.  **Corroboration Engine:** We implemented a deep search across trusted domains to verify claims and find mentions of the content elsewhere to determine its "drift."
-4.  **Frontend/API:** Built with **Next.js** and **Tailwind CSS**, providing a clean, terminal-inspired interface that reflects the tool's forensic nature.
+4.  **Verification Platform:** Built with **Next.js** and **Tailwind CSS**, providing a clean, terminal-inspired interface for quick, simple forensic verification.
 
 ## Challenges we ran into
 
-The biggest hurdle was "reverse entropy"—trying to find a live URL from a static, often low-quality screenshot. Social media platforms also have aggressive bot detection, which made using Playwright for forensic verification difficult. We had to fine-tune our headers and navigation patterns to ensure we could retrieve the necessary metadata without being blocked.
+The biggest hurdle was the **"Wisdom of the Crowd"**—trying to find a live URL from a static, often low-quality screenshot by triangulating platform-specific clues. Social media platforms also have aggressive bot detection, which made using Playwright for forensic verification difficult. We had to fine-tune our headers and navigation patterns to ensure we could retrieve the necessary metadata without being blocked.
 
 ## Accomplishments that we're proud of
 
@@ -39,7 +40,13 @@ We successfully built a functional 4-stage pipeline that does more than just "fa
 
 ## What we learned
 
-We gained a deep appreciation for the fragility of digital metadata. We learned how easily information is manipulated once it leaves its native platform and how multimodal LLMs can be used not just for generation, but as powerful forensic tools to compare "drift" between two pieces of content.
+We gained a deep appreciation for the **fragility of digital metadata**. Information is easily manipulated once it leaves its native platform, and screenshots are the primary vector for "context stripping."
+
+Key insights:
+
+- **LLMs as Forensic Auditors:** We learned that multimodal LLMs can be used for more than generation—they are powerful forensic tools for **drift analysis** (comparing "ground truth" to "viral claims").
+- **oEmbed as a Truth Source:** Traditional scraping is often blocked or low-fidelity; leveraging official oEmbed APIs is a more robust way to capture absolute metadata (exact timestamps and author IDs) for OSINT verification.
+- **Wisdom of the Crowd:** Rebuilding a credible forensic trail from a static, low-quality screenshot is difficult, but multimodal agents can bridge the gap by triangulating platform-specific clues found across the digital landscape.
 
 ## Key Metrics
 
@@ -52,13 +59,20 @@ We gained a deep appreciation for the fragility of digital metadata. We learned 
 
 - **Cybersecurity:** Demonstrates digital forensics and OSINT techniques to verify data integrity.
 - **Innovation:** Uses multimodal LLMs for "drift analysis" rather than simple text fact-checking.
-- **User Experience:** Provides a clean, terminal-inspired interface with real-time SSE progress updates.
+- **User Experience:** Provides a clean, terminal-inspired interface with real-time polling updates (migrated from SSE to ensure 100% production stability).
 
 ## What's next for Postcard
 
 - **Browser Extension:** Bringing Postcard directly into the feed, allowing users to right-click any post to see its score instantly.
 - **Expanded Platform Support:** Increasing our corroboration engine to include specialized platforms like Telegram and Discord.
 - **API for Journalists:** Opening up our forensic pipeline as an API for newsrooms to verify user-generated content in real-time.
+
+---
+
+### Demos
+
+- **YouTube demo of the browser extension:** [https://youtu.be/TXQTkkFSJhU](https://youtu.be/TXQTkkFSJhU)
+- **YouTube demo of the app:** [https://youtu.be/3AQTUkImhM8](https://youtu.be/3AQTUkImhM8)
 
 ---
 

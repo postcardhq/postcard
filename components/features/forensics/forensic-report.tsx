@@ -96,11 +96,11 @@ export function ForensicReport({ report }: { report: PostcardReport }) {
   };
 
   const handleReverify = () => {
-    window.location.href = `/?url=${encodeURIComponent(report.triangulation.targetUrl || "")}&refresh=true`;
+    window.location.href = `/postcards?url=${encodeURIComponent(report.triangulation.targetUrl || "")}&refresh=true`;
   };
 
   const handleHome = () => {
-    window.location.href = "/";
+    window.location.href = "/postcards";
   };
 
   useEffect(() => {

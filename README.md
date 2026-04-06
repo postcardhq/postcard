@@ -9,14 +9,11 @@
 [![Drizzle](https://img.shields.io/badge/Drizzle-C5F74F?logo=drizzle&logoColor=000)](https://orm.drizzle.team/)
 [![Playwright](https://img.shields.io/badge/Playwright-2EAD33?logo=playwright&logoColor=white)](https://playwright.dev/)
 
-> _Democratizing the truth._
+> _Trace the Truth._
 
 ![Postcard Illustration](./public/postcard-illustration.png)
 
-Postcard is a digital forensics tool dedicated to the democratization of
-honesty. It takes any social media post and traces it back to its definitive
-origin—calculating a postcard score of credibility by auditing how much the
-content has drifted from the ground truth.
+Postcard is a digital forensics tool dedicated to tracing viral content back to its definitive source. By auditing how much a post has drifted from the ground truth, it calculates a **Postcard Score** to restore credibility in the post-truth era.
 
 ## Hackathon submission
 
@@ -28,7 +25,7 @@ content has drifted from the ground truth.
 
 ```mermaid
 sequenceDiagram
-    participant U as Frontend (/postcards)
+    participant U as Verification Platform (/postcards)
     participant API as API Route (/api/postcards)
     participant P as Forensic Pipeline
     participant I as UnifiedPostStrategy (oEmbed/Jina)
@@ -83,29 +80,24 @@ Postcard is a digital forensics pipeline that takes a social media post URL,
 traces it back to its original source, and produces a postcard score
 (0–100%) measuring how much the content has drifted from the truth.
 
-> _Democratizing the truth. Trace every post back to its source._
+> _Trace the Truth._
 
 ## The problem
 
 Screenshots strip all context. By the time something goes viral, it's been
-cropped, captioned, and misattributed. Postcard reverses this entropy by
-finding the primary source and auditing it for forensic consistency—providing a
-scalable solution for the democratization of honesty.
+cropped, captioned, and misattributed. Postcard utilizes the **"Wisdom of the Crowd"**
+to triangulate the primary source and audit it for forensic consistency—providing a
+scalable solution for restoring context and credibility.
 
 ### Solution
 
 We built a 4-stage forensic pipeline focused on deep audit log generation and
 corroboration for social media posts:
 
-1. **URL Entrypoint:** Users submit the direct source URL for forensic
-   verification.
-2. **Strategy-Based Ingest:** `UnifiedPostStrategy` delegates to specialized
-   clients (Reddit JSON, YouTube oEmbed, X oEmbed, Instagram oEmbed, TikTok
-   scraper) with Jina Reader as fallback for general websites.
-3. **Corroboration:** Gemini agent performs Google Dorking across trusted
-   domains (X, Reddit, News) to verify claims and identify primary sources.
-4. **Verification:** Verifier agent checks URL reachability and temporal
-   alignment against the post's timestamp.
+1. **Multimodal Ingest:** Utilizes Jina Reader to ingest live content and metadata, establishing the "ground truth" for the forensic audit.
+2. **Forensic Audit:** Uses Playwright to perform direct site checks, verifying origin and ensuring temporal alignment with the reported narrative.
+3. **Corroboration Engine:** Performs deep search across trusted domains to verify claims and find mentions of the content elsewhere to determine its "drift."
+4. **Verification Platform:** Built with Next.js and Tailwind CSS, providing a clean, terminal-inspired interface for quick, simple forensic verification.
 
 ## Lessons learned
 
